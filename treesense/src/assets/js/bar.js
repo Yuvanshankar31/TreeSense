@@ -15,7 +15,7 @@ document.addEventListener("DOMContentLoaded", function() {
     
 };
 const ctx = document.getElementById('mybarChart').getContext('2d');
-const storedLocation = localStorage.getItem('selectedLocation') || 'Coimbatore';
+const storedLocation = localStorage.getItem('selectedLocation') || 'Selected Location';
 const myChart = new Chart(ctx, {
     type: 'bar',
     data: {
