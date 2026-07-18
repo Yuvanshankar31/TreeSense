@@ -109,6 +109,33 @@
 
             let currentRectangle = null;
 
+            // Load coordinates from localStorage (falls back to Bhopal default)
+            const mapLat = parseFloat(localStorage.getItem('selectedLatitude')) || 23.2599;
+            const mapLon = parseFloat(localStorage.getItem('selectedLongitude')) || 77.4126;
+            
+            // Re-center map to the current selected location
+            map.setCenter({ lat: mapLat, lng: mapLon });
+
+            // Create default boundary box automatically
+            const defaultBounds = new google.maps.LatLngBounds(
+                new google.maps.LatLng(mapLat - 0.008, mapLon - 0.008),
+                new google.maps.LatLng(mapLat + 0.008, mapLon + 0.008)
+            );
+
+            const defaultRect = new google.maps.Rectangle({
+                bounds: defaultBounds,
+                fillColor: '#2ec4b6',
+                fillOpacity: 0.2,
+                strokeWeight: 2,
+                strokeColor: '#2ec4b6',
+                clickable: true,
+                editable: true,
+                map: map
+            });
+
+            currentRectangle = defaultRect;
+            runAnalysis(defaultBounds);
+
             const drawingManager = new google.maps.drawing.DrawingManager({
                 drawingMode: google.maps.drawing.OverlayType.RECTANGLE,
                 drawingControl: true,
@@ -134,9 +161,11 @@
                     currentRectangle.setMap(null);
                 }
                 currentRectangle = event.overlay;
+                runAnalysis(currentRectangle.getBounds());
+            });
 
-                const bounds = currentRectangle.getBounds();
-                console.log('Captured Bounds:', bounds);
+            function runAnalysis(bounds) {
+                console.log('Running analysis on bounds:', bounds);
 
                 const proxyUrl = 'https://gmap-sih-img-proxy.vipulchaturvedi.workers.dev/';
                 const imgUrl = `${proxyUrl}?center=${bounds.getCenter().lat()},${bounds.getCenter().lng()}&zoom=15&size=640x640&path=fillcolor:0x00000000|color:0x00000000|${bounds.getNorthEast().toUrlValue()}|${bounds.getNorthEast().lat()},${bounds.getSouthWest().lng()}|${bounds.getSouthWest().toUrlValue()}|${bounds.getSouthWest().lat()},${bounds.getNorthEast().lng()}&key=AIzaSyCpzV2uci8gLyp8si2idL0Gy1PLUe_J8bU`;
@@ -189,7 +218,7 @@
 
                     document.getElementById('greenPercent').innerText = `${greenPercent.toFixed(2)}%`;
                 };
-            });
+            }
         }
     </script>
 
