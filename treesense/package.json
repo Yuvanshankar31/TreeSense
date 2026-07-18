@@ -1,0 +1,11 @@
+{
+  "name": "treesense-web",
+  "version": "1.0.0",
+  "description": "TreeSense Web Dashboard",
+  "scripts": {
+    "start": "serve -p 3000"
+  },
+  "dependencies": {
+    "serve": "^14.2.4"
+  }
+}

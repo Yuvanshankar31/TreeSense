@@ -1,0 +1,46 @@
+/* predict.css - Object Detection Specific Styling */
+@import url('styles.css');
+
+main {
+  max-width: 960px;
+  margin: 30px auto;
+  padding: 0 20px;
+}
+
+canvas {
+  width: 100%;
+  height: auto;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border);
+  margin-top: 20px;
+}
+
+#objectCount {
+  margin-top: 20px;
+  font-size: 1.5em;
+  font-weight: 700;
+  color: var(--primary);
+  text-align: center;
+  background: var(--accent-light);
+  border-left: 4px solid var(--accent);
+  padding: 16px;
+  border-radius: var(--radius-sm);
+}
+
+input[type="file"] {
+  display: block;
+  width: 100%;
+  max-width: 320px;
+  margin: 20px auto;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: white;
+  font-weight: 500;
+  outline: none;
+}
+
+input[type="file"]:focus {
+  border-color: var(--border-focus);
+}

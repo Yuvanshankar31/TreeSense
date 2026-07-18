@@ -1,0 +1,11 @@
+numpy
+matplotlib
+scikit-image
+opencv-python
+ultralytics
+scipy
+pandas
+tqdm
+Pillow
+ipykernel
+jupyter

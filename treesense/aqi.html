@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Air Quality Index (AQI)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <link rel="stylesheet" href="/src/assets/css/styles.css">
+    <style>
+        body {
+            background: #ffffff;
+            padding: 20px;
+        }
+        .chart-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="chart-container">
+        <canvas id="aqiChart" width="800" height="450"></canvas>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const ctx = document.getElementById('aqiChart').getContext('2d');
+            const storedLocation = localStorage.getItem('selectedLocation') || 'Coimbatore';
+            const data = {
+                '2014': 142,
+                '2015': 135,
+                '2016': 150,
+                '2017': 128,
+                '2018': 118,
+                '2019': 110,
+                '2020': 85,
+                '2021': 95,
+                '2022': 105,
+                '2023': 92
+            };
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: 'Average Annual AQI',
+                        data: Object.values(data),
+                        borderColor: '#e07a5f',
+                        backgroundColor: 'rgba(224, 122, 95, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#3d405b',
+                        pointBorderColor: '#ffffff',
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Air Quality Index (AQI) History (' + storedLocation + ')',
+                            font: {
+                                size: 18,
+                                family: "'Outfit', sans-serif",
+                                weight: 'bold'
+                            },
+                            color: '#0f3425',
+                            padding: 20
+                        },
+                        legend: {
+                            labels: {
+                                font: {
+                                    family: "'Plus Jakarta Sans', sans-serif"
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 50,
+                            max: 180,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + ' AQI';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

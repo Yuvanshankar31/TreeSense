@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temperature Trends</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <link rel="stylesheet" href="/src/assets/css/styles.css">
+    <style>
+        body {
+            background: #ffffff;
+            padding: 20px;
+        }
+        .chart-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="chart-container">
+        <canvas id="tempChart" width="800" height="450"></canvas>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const ctx = document.getElementById('tempChart').getContext('2d');
+            const storedLocation = localStorage.getItem('selectedLocation') || 'Coimbatore';
+            const data = {
+                '2014': 25.4,
+                '2015': 25.8,
+                '2016': 26.1,
+                '2017': 25.9,
+                '2018': 26.3,
+                '2019': 26.0,
+                '2020': 25.7,
+                '2021': 26.2,
+                '2022': 26.5,
+                '2023': 26.8
+            };
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: 'Mean Annual Temperature (°C)',
+                        data: Object.values(data),
+                        borderColor: '#2ec4b6',
+                        backgroundColor: 'rgba(46, 196, 182, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#0f3425',
+                        pointBorderColor: '#ffffff',
+                        pointHoverRadius: 7
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Mean Annual Temperature Trend (' + storedLocation + ')',
+                            font: {
+                                size: 18,
+                                family: "'Outfit', sans-serif",
+                                weight: 'bold'
+                            },
+                            color: '#0f3425',
+                            padding: 20
+                        },
+                        legend: {
+                            labels: {
+                                font: {
+                                    family: "'Plus Jakarta Sans', sans-serif"
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 24,
+                            max: 28,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + '°C';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

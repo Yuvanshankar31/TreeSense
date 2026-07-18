@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Soil pH Level</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <link rel="stylesheet" href="/src/assets/css/styles.css">
+    <style>
+        body {
+            background: #ffffff;
+            padding: 20px;
+        }
+        .chart-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="chart-container">
+        <canvas id="soilChart" width="800" height="450"></canvas>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const ctx = document.getElementById('soilChart').getContext('2d');
+            const data = {
+                'Zone A (North)': 6.2,
+                'Zone B (East)': 6.8,
+                'Zone C (South)': 5.9,
+                'Zone D (West)': 6.5,
+                'Zone E (Central)': 7.1,
+                'Zone F (Forest)': 5.5
+            };
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        label: 'Soil pH Level',
+                        data: Object.values(data),
+                        backgroundColor: [
+                            'rgba(45, 106, 79, 0.6)',
+                            'rgba(82, 183, 136, 0.6)',
+                            'rgba(116, 198, 157, 0.6)',
+                            'rgba(149, 213, 178, 0.6)',
+                            'rgba(183, 228, 199, 0.6)',
+                            'rgba(216, 243, 220, 0.6)'
+                        ],
+                        borderColor: [
+                            '#1b4332',
+                            '#2d6a4f',
+                            '#40916c',
+                            '#52b788',
+                            '#74c69d',
+                            '#95d5b2'
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Soil pH Variation Across Survey Zones',
+                            font: {
+                                size: 18,
+                                family: "'Outfit', sans-serif",
+                                weight: 'bold'
+                            },
+                            color: '#0f3425',
+                            padding: 20
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 4,
+                            max: 9,
+                            ticks: {
+                                callback: function(value) {
+                                    return value + ' pH';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

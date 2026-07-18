@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Historical Charts - TreeSense Imaging</title>
+    
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="/images/favicon.ico" type="image/x-icon">
+    
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/src/assets/css/styles.css">
+</head>
+<body>
+
+    <!-- Unified Header -->
+    <header class="site-header">
+        <div class="container header-container">
+            <a href="/index.html" class="logo-link">
+                <img src="/images/treeicon.png" class="logo-image" alt="TreeSense Imaging logo">
+                <span class="logo-text">TreeSense</span>
+            </a>
+            
+            <!-- Desktop Navigation -->
+            <nav>
+                <ul class="nav-menu" id="nav-menu">
+                    <li><a href="/index.html" class="nav-link">Home</a></li>
+                    <li><a href="/predict.html" class="nav-link">Dashboard</a></li>
+                    <li><a href="/chart.html" class="nav-link active">Historical Charts</a></li>
+                </ul>
+            </nav>
+
+            <!-- Mobile Burger Icon -->
+            <button class="mobile-menu-icon" id="mobile-menu-toggle" aria-label="Toggle Navigation">
+                <div class="bar"></div>
+                <div class="bar"></div>
+                <div class="bar"></div>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Layout -->
+    <main class="container dashboard-layout">
+        <div class="dashboard-title-bar">
+            <h2>Historical Environmental Charts</h2>
+            <p>Compare precipitation departure, temperature shifts, AQI trends, and soil pH levels over time.</p>
+        </div>
+
+        <!-- Dashboard Sub-Tabs -->
+        <div class="dashboard-tabs">
+            <button id="rainfall-button" class="tab-button active">Rainfall Departure</button>
+            <button id="temperature-button" class="tab-button">Temperature Trends</button>
+            <button id="aqi-button" class="tab-button">Air Quality Index</button>
+            <button id="soil-button" class="tab-button">Soil pH Levels</button>
+        </div>
+
+        <!-- Main Display Iframe Frame -->
+        <div class="iframe-container">
+            <iframe id="model-iframe" src="rainfall.html" title="Historical Environmental Chart"></iframe>
+        </div>
+    </main>
+
+    <!-- Unified Footer -->
+    <footer class="site-footer">
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <h3>
+                        <img src="/images/treeicon.png" alt="Logo">
+                        TreeSense Imaging
+                    </h3>
+                    <p>Advancing ecological monitoring and automated forestry analytics with machine learning and satellite intelligence.</p>
+                </div>
+                <div class="footer-links">
+                    <h4>Navigation</h4>
+                    <ul>
+                        <li><a href="/index.html">Home</a></li>
+                        <li><a href="/predict.html">Dashboard</a></li>
+                        <li><a href="/chart.html">Historical Charts</a></li>
+                    </ul>
+                </div>
+                <div class="footer-contact">
+                    <h4>Contact Us</h4>
+                    <p>📧 <a href="mailto:sksyuvanshankar@gamil.com">sksyuvanshankar@gamil.com</a></p>
+                    <p>📍 Coimbatore, India</p>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 TreeSense Imaging. All rights reserved.</p>
+                <p>Made with 💚 by Yuvan Shankar and Tharuna.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="/src/assets/js/script.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const buttons = [
+                { btn: document.getElementById('rainfall-button'), src: 'rainfall.html' },
+                { btn: document.getElementById('temperature-button'), src: 'temperature.html' },
+                { btn: document.getElementById('aqi-button'), src: 'aqi.html' },
+                { btn: document.getElementById('soil-button'), src: 'soil.html' }
+            ];
+            
+            const modelIframe = document.getElementById('model-iframe');
+
+            buttons.forEach(item => {
+                item.btn.addEventListener('click', () => {
+                    modelIframe.src = item.src;
+                    buttons.forEach(x => x.btn.classList.remove('active'));
+                    item.btn.classList.add('active');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

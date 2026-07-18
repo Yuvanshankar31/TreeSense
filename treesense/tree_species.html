@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Map TreeSense - Species Analytics</title>
+    <link rel="stylesheet" href="/src/assets/css/styles.css">
+    <style>
+        body {
+            background-color: #ffffff;
+            padding: 24px;
+            text-align: center;
+        }
+
+        .module-card {
+            max-width: 1100px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 32px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .module-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        #map {
+            height: 450px;
+            width: 100%;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 30px;
+        }
+
+        .output-section {
+            text-align: left;
+            margin-top: 30px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        .output-section h2 {
+            font-size: 20px;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="module-card">
+        <div class="module-header">
+            <h2>Draw Boundary for Analysis</h2>
+            <p>Use the drawing tools at the top of the map to select a rectangular boundary for canopy assessment.</p>
+        </div>
+
+        <!-- Google Map Container -->
+        <div id="map"></div>
+
+        <!-- Output Analysis Section -->
+        <div id="output" class="output-section">
+            <h2>Map Crop & Green Analysis</h2>
+            
+            <div class="image-comparison">
+                <div class="image-panel">
+                    <h3>Original Cropped Section</h3>
+                    <img id="croppedImage" src="/images/treeicon.png" alt="Cropped Satellite Image" crossorigin="anonymous" style="height: 400px; object-fit: cover;">
+                </div>
+                <div class="image-panel">
+                    <h3>Green Coverage Analysis</h3>
+                    <canvas id="processedCanvas" width="480" height="480" style="height: 400px; width: 100%; object-fit: cover;"></canvas>
+                </div>
+            </div>
+
+            <h3 style="font-size: 16px; color: var(--primary); margin: 24px 0 12px 0;">Geographic & Canopy Metrics</h3>
+            
+            <div class="stats-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Green Cover Area</div>
+                    <div class="metric-value" id="greenPercent">0.00%</div>
+                </div>
+                <div class="metric-card" style="border-left-color: var(--secondary); background: rgba(27, 77, 62, 0.05);">
+                    <div class="metric-label">Target Location Info</div>
+                    <div id="locationInfo" style="margin-top: 8px; font-size: 13px; color: var(--text-muted); line-height: 1.4;">
+                        Draw a box on the map to display GPS coordinates.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        function initMap() {
+            const map = new google.maps.Map(document.getElementById('map'), {
+                center: { lat: 23.2599, lng: 77.4126 },
+                zoom: 12,
+                styles: [
+                    {
+                        "featureType": "poi.park",
+                        "elementType": "geometry.fill",
+                        "stylers": [{ "color": "#d8f3dc" }]
+                    }
+                ]
+            });
+
+            let currentRectangle = null;
+
+            const drawingManager = new google.maps.drawing.DrawingManager({
+                drawingMode: google.maps.drawing.OverlayType.RECTANGLE,
+                drawingControl: true,
+                drawingControlOptions: {
+                    position: google.maps.ControlPosition.TOP_CENTER,
+                    drawingModes: ['rectangle'],
+                },
+                rectangleOptions: {
+                    fillColor: '#2ec4b6',
+                    fillOpacity: 0.2,
+                    strokeWeight: 2,
+                    strokeColor: '#2ec4b6',
+                    clickable: true,
+                    editable: true,
+                    zIndex: 1
+                }
+            });
+
+            drawingManager.setMap(map);
+
+            google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
+                if (currentRectangle) {
+                    currentRectangle.setMap(null);
+                }
+                currentRectangle = event.overlay;
+
+                const bounds = currentRectangle.getBounds();
+                console.log('Captured Bounds:', bounds);
+
+                const proxyUrl = 'https://gmap-sih-img-proxy.vipulchaturvedi.workers.dev/';
+                const imgUrl = `${proxyUrl}?center=${bounds.getCenter().lat()},${bounds.getCenter().lng()}&zoom=15&size=640x640&path=fillcolor:0x00000000|color:0x00000000|${bounds.getNorthEast().toUrlValue()}|${bounds.getNorthEast().lat()},${bounds.getSouthWest().lng()}|${bounds.getSouthWest().toUrlValue()}|${bounds.getSouthWest().lat()},${bounds.getNorthEast().lng()}&key=AIzaSyCpzV2uci8gLyp8si2idL0Gy1PLUe_J8bU`;
+
+                const croppedImage = document.getElementById('croppedImage');
+                croppedImage.src = imgUrl;
+
+                document.getElementById('locationInfo').innerHTML = `
+                    <p style="margin: 2px 0;"><strong>Center Lat:</strong> ${bounds.getCenter().lat().toFixed(5)}</p>
+                    <p style="margin: 2px 0;"><strong>Center Lng:</strong> ${bounds.getCenter().lng().toFixed(5)}</p>
+                    <p style="margin: 2px 0;"><strong>Zoom Level:</strong> 15</p>
+                `;
+
+                croppedImage.onload = () => {
+                    const canvas = document.getElementById('processedCanvas');
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(croppedImage, 0, 0, canvas.width, canvas.height);
+
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    let totalGreen = 0;
+                    let blackPixelCount = 0;
+
+                    for (let i = 0; i < imageData.data.length; i += 4) {
+                        totalGreen += imageData.data[i + 1];
+                    }
+
+                    const meanGreen = totalGreen / (imageData.data.length / 4);
+
+                    for (let i = 0; i < imageData.data.length; i += 4) {
+                        let gray = imageData.data[i + 1] * 0.587;
+
+                        if (gray < meanGreen / 1.5) {
+                            gray = 0;
+                            blackPixelCount++;
+                        } else {
+                            gray = 255;
+                        }
+
+                        imageData.data[i] = gray;
+                        imageData.data[i + 1] = gray;
+                        imageData.data[i + 2] = gray;
+                        imageData.data[i + 3] = 255;
+                    }
+
+                    ctx.putImageData(imageData, 0, 0);
+
+                    const totalPixels = canvas.width * canvas.height;
+                    const greenPixels = totalPixels - blackPixelCount;
+                    const greenPercent = (greenPixels / totalPixels) * 100;
+
+                    document.getElementById('greenPercent').innerText = `${greenPercent.toFixed(2)}%`;
+                };
+            });
+        }
+    </script>
+
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCpzV2uci8gLyp8si2idL0Gy1PLUe_J8bU&libraries=drawing&callback=initMap"></script>
+</body>
+</html>
