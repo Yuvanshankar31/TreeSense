@@ -171,6 +171,14 @@
                 const imgUrl = `${proxyUrl}?center=${bounds.getCenter().lat()},${bounds.getCenter().lng()}&zoom=15&size=640x640&path=fillcolor:0x00000000|color:0x00000000|${bounds.getNorthEast().toUrlValue()}|${bounds.getNorthEast().lat()},${bounds.getSouthWest().lng()}|${bounds.getSouthWest().toUrlValue()}|${bounds.getSouthWest().lat()},${bounds.getNorthEast().lng()}&key=AIzaSyCpzV2uci8gLyp8si2idL0Gy1PLUe_J8bU`;
 
                 const croppedImage = document.getElementById('croppedImage');
+                
+                // Add robust fallback for 403 / billing error cases
+                croppedImage.onerror = () => {
+                    croppedImage.onerror = null; // Prevent loop
+                    console.warn("Failed to load static map crop from proxy (403/Billing Error). Falling back to local forest sample.");
+                    croppedImage.src = '/images/background.jpg';
+                };
+                
                 croppedImage.src = imgUrl;
 
                 document.getElementById('locationInfo').innerHTML = `
