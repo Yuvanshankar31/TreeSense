@@ -41,6 +41,3 @@ To start using the tools, run the project locally (e.g. by starting the server i
 
 ## Contributions
 Contributions are welcome! Please open a PR to get started on contributing to the project.
-
-## License
-This project is licensed under GNU AGPLv3  
