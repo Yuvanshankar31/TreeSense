@@ -23,31 +23,55 @@
     </div>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const ctx = document.getElementById('aqiChart').getContext('2d');
+        document.addEventListener("DOMContentLoaded", async function() {
+            const lat = localStorage.getItem('selectedLatitude') || '11.0168';
+            const lon = localStorage.getItem('selectedLongitude') || '76.9558';
             const storedLocation = localStorage.getItem('selectedLocation') || 'Selected Location';
-            const data = {
-                '2014': 142,
-                '2015': 135,
-                '2016': 150,
-                '2017': 128,
-                '2018': 118,
-                '2019': 110,
-                '2020': 85,
-                '2021': 95,
-                '2022': 105,
-                '2023': 92
-            };
+
+            const ctx = document.getElementById('aqiChart').getContext('2d');
+            
+            // Default fallback monthly average US AQI values
+            let monthlyAQI = [68, 74, 85, 90, 80, 55, 48, 52, 60, 72, 88, 75];
+            
+            try {
+                // Fetch real hourly US AQI for the full year of 2025
+                const response = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=us_aqi&start_date=2025-01-01&end_date=2025-12-31`);
+                const result = await response.json();
+                
+                if (result.hourly && result.hourly.us_aqi) {
+                    const times = result.hourly.time;
+                    const values = result.hourly.us_aqi;
+                    
+                    // Aggregate hourly to monthly averages
+                    const aggregatedSums = Array(12).fill(0);
+                    const aggregatedCounts = Array(12).fill(0);
+                    
+                    for (let i = 0; i < times.length; i++) {
+                        const date = new Date(times[i]);
+                        const month = date.getMonth(); // 0-11
+                        aggregatedSums[month] += (values[i] || 0);
+                        aggregatedCounts[month]++;
+                    }
+                    
+                    monthlyAQI = aggregatedSums.map((sum, index) => {
+                        return aggregatedCounts[index] > 0 ? Math.round(sum / aggregatedCounts[index]) : 0;
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to fetch live historical AQI, using fallback.", err);
+            }
+
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
             new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: Object.keys(data),
+                    labels: months,
                     datasets: [{
-                        label: 'Average Annual AQI',
-                        data: Object.values(data),
+                        label: 'Average US AQI',
+                        data: monthlyAQI,
                         borderColor: '#e07a5f',
-                        backgroundColor: 'rgba(224, 122, 95, 0.1)',
+                        backgroundColor: 'rgba(224, 122, 95, 0.15)',
                         fill: true,
                         tension: 0.3,
                         borderWidth: 3,
@@ -62,7 +86,7 @@
                     plugins: {
                         title: {
                             display: true,
-                            text: 'Air Quality Index (AQI) History (' + storedLocation + ')',
+                            text: 'Air Quality Index (AQI) History in ' + storedLocation + ' (2025)',
                             font: {
                                 size: 18,
                                 family: "'Outfit', sans-serif",
@@ -81,8 +105,7 @@
                     },
                     scales: {
                         y: {
-                            min: 50,
-                            max: 180,
+                            beginAtZero: true,
                             ticks: {
                                 callback: function(value) {
                                     return value + ' AQI';

@@ -1,58 +1,83 @@
-document.addEventListener("DOMContentLoaded", function() {
-    var bar = document.getElementById("mybarChart");
+document.addEventListener("DOMContentLoaded", async function() {
+    const lat = localStorage.getItem('selectedLatitude') || '11.0168';
+    const lon = localStorage.getItem('selectedLongitude') || '76.9558';
+    const storedLocation = localStorage.getItem('selectedLocation') || 'Selected Location';
+
+    const ctx = document.getElementById('mybarChart').getContext('2d');
     
-    const data = {
-    '2013': 2.1,
-    '2014': 1.5,
-    '2015': 1.9,
-    '2016': 2.8,
-    '2017': 2.2,
-    '2018': 2.6,
-    '2019': 1.4,
-    '2020': 3.2,
-    '2021': 1.2,
-    '2022': 4.7
+    // Default fallback monthly totals (Coimbatore historical typical)
+    let monthlyPrecipitation = [5.2, 8.4, 21.0, 45.3, 72.8, 64.2, 59.5, 88.0, 112.4, 158.2, 92.6, 22.4];
     
-};
-const ctx = document.getElementById('mybarChart').getContext('2d');
-const storedLocation = localStorage.getItem('selectedLocation') || 'Selected Location';
-const myChart = new Chart(ctx, {
-    type: 'bar',
-    data: {
-        labels: Object.keys(data),
-        datasets: [{
-            label: 'Rainfall Departure by Year',
-            data: Object.values(data),
-        }, ],
-    },
-    options: {
-        plugins: {
-            title: {
-              display: true,
-              text: 'Rainfall Departure in ' + storedLocation + ' ',
-              font: {
-                size: 18
-              }
-            },
-          },
-        backgroundColor: [
-            'rgba(226,234,60, 0.3)',  // Bar 1
-            'rgba(194,172,57, 0.3)',  // Bar 2
-            'rgba(16,44,139, 0.3)',  // Bar 3
-            'rgba(179,138,114, 0.3)',  // Bar 4
-            'rgba(77,212,123, 0.3)', // Bar 5
-            'rgba(156,167,20, 0.3)',  // Bar 6
-            'rgba(166,2,136, 0.3)',  // Bar 7
-            'rgba(70,123,116, 0.3)',  // Bar 8
-            'rgba(54,185,183, 0.3)',  // Bar 9
-            'rgba(154,251,39, 0.3)',  // Bar 10
-            'rgba(155,12,8, 0.3)', // Bar 11
-            'rgba(171,212,68, 0.3)'   // Bar 12
-        ],
-        borderWidth: 2,
-        borderColor: 'black',
-        mantainAspectRatio: false,
-        responsive: false
+    try {
+        // Fetch real daily historical precipitation for the full year of 2025
+        const response = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2025-01-01&end_date=2025-12-31&daily=precipitation_sum&timezone=auto`);
+        const result = await response.json();
+        
+        if (result.daily && result.daily.precipitation_sum) {
+            const times = result.daily.time;
+            const values = result.daily.precipitation_sum;
+            
+            // Aggregate daily sums to monthly sums
+            const aggregated = Array(12).fill(0);
+            for (let i = 0; i < times.length; i++) {
+                const date = new Date(times[i]);
+                const month = date.getMonth(); // 0-11
+                aggregated[month] += (values[i] || 0);
+            }
+            monthlyPrecipitation = aggregated.map(val => parseFloat(val.toFixed(1)));
+        }
+    } catch (err) {
+        console.error("Failed to fetch live historical rainfall, using fallback.", err);
     }
-});
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: months,
+            datasets: [{
+                label: 'Monthly Precipitation (mm)',
+                data: monthlyPrecipitation,
+                backgroundColor: 'rgba(46, 196, 182, 0.65)',
+                borderColor: '#1b4d3e',
+                borderWidth: 2,
+                borderRadius: 6
+            }],
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Rainfall / Precipitation in ' + storedLocation + ' (2025)',
+                    font: {
+                        size: 18,
+                        family: "'Outfit', sans-serif",
+                        weight: 'bold'
+                    },
+                    color: '#0f3425',
+                    padding: 20
+                },
+                legend: {
+                    labels: {
+                        font: {
+                            family: "'Plus Jakarta Sans', sans-serif"
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value + ' mm';
+                        }
+                    }
+                }
+            }
+        }
+    });
 });

@@ -82,27 +82,58 @@
             const storedLocation = localStorage.getItem('selectedLocation');
             if (storedLocation) {
                 locationInput.value = storedLocation;
-                fetchWeather(storedLocation);
+                const lat = localStorage.getItem('selectedLatitude') || '11.0168';
+                const lon = localStorage.getItem('selectedLongitude') || '76.9558';
+                fetchWeather(storedLocation, lat, lon);
             }
 
-            getWeatherButton.addEventListener('click', () => {
+            getWeatherButton.addEventListener('click', async () => {
                 const location = locationInput.value.trim();
                 if (!location) {
                     alert('Please enter a location.');
                     return;
                 }
-                // Save to localStorage
-                localStorage.setItem('selectedLocation', location);
-                fetchWeather(location);
+
+                // 1. Fetch Coordinates via Open-Meteo Geocoding API
+                try {
+                    const geocodeResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`);
+                    const geocodeData = await geocodeResponse.json();
+
+                    if (!geocodeData.results || geocodeData.results.length === 0) {
+                        alert('Could not find location coordinates. Please try another city.');
+                        return;
+                    }
+
+                    const result = geocodeData.results[0];
+                    const lat = result.latitude;
+                    const lon = result.longitude;
+                    const locationName = `${result.name}, ${result.country || ''}`;
+
+                    // Save coordinates and name to localStorage
+                    localStorage.setItem('selectedLocation', locationName);
+                    localStorage.setItem('selectedLatitude', lat);
+                    localStorage.setItem('selectedLongitude', lon);
+
+                    // Update input to show full matched name
+                    locationInput.value = locationName;
+
+                    // 2. Fetch current weather details
+                    fetchWeather(locationName, lat, lon);
+
+                } catch (err) {
+                    console.error('Geocoding error:', err);
+                    alert('An error occurred during location lookup.');
+                }
             });
 
-            async function fetchWeather(location) {
+            async function fetchWeather(locationName, lat, lon) {
                 try {
-                    const currentWeatherResponse = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=6557810176c36fac5f0db536711a6c52&units=metric`);
+                    // Fetch weather using coordinates or location query
+                    const currentWeatherResponse = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=6557810176c36fac5f0db536711a6c52&units=metric`);
                     const currentWeatherData = await currentWeatherResponse.json();
 
                     if (currentWeatherData.cod !== 200) {
-                        alert('Error fetching weather data. Please check the spelling.');
+                        alert('Error fetching weather data.');
                         return;
                     }
 
