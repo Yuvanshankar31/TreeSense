@@ -10,6 +10,7 @@ The project includes a website with a landing page and a dashboard offering the 
 - **Green Cover Estimator:** Estimates green cover percentage.
 - **Tree Species Identifier:** Identifies tree species.
 - **Optimal Pathing:** [Computes the optimal path between two points within the area.](https://github.com/lag25/ForestPathPlanner)
+- **Forest Health & Canopy Analyzer:** Evaluates vegetative condition (Healthy, Stressed, Bare Soil) using HSL color analysis and calculates the Forest Health Index (FHI).
 - **Historical Data:** Provides historical data for analysis and comparison.
 
 ## Features

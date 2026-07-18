@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forest Health & Canopy Analyzer</title>
+  <link rel="stylesheet" href="/src/assets/css/styles.css">
+  <style>
+    body {
+      background: #ffffff;
+      padding: 24px;
+    }
+    .module-card {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      box-shadow: var(--shadow-sm);
+    }
+    .module-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .module-header h2 {
+      font-size: 26px;
+      color: var(--primary);
+    }
+    .module-header p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    /* Circular Gauge Chart for FHI */
+    .fhi-gauge-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      margin: 20px 0;
+    }
+    .fhi-ring {
+      position: relative;
+      width: 140px;
+      height: 140px;
+    }
+    .fhi-ring svg {
+      width: 100%;
+      height: 100%;
+      transform: rotate(-90deg);
+    }
+    .fhi-circle-bg {
+      fill: none;
+      stroke: var(--border);
+      stroke-width: 12;
+    }
+    .fhi-circle-fill {
+      fill: none;
+      stroke: var(--accent);
+      stroke-width: 12;
+      stroke-dasharray: 402;
+      stroke-dashoffset: 402;
+      stroke-linecap: round;
+      transition: stroke-dashoffset 0.8s ease-in-out;
+    }
+    .fhi-value-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--primary);
+      font-family: 'Outfit', sans-serif;
+    }
+    .fhi-label {
+      font-weight: 700;
+      color: var(--primary);
+      margin-top: 12px;
+      font-size: 16px;
+    }
+    .recommendation-banner {
+      background: var(--bg-main);
+      border-left: 4px solid var(--accent);
+      padding: 16px;
+      border-radius: var(--radius-sm);
+      margin-top: 24px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--text-main);
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<div class="module-card">
+  <div class="module-header">
+    <h2>Forest Health & Canopy Analyzer</h2>
+    <p>Upload high-resolution satellite or drone canopy imagery to identify vegetative health zones and calculate the Forest Health Index (FHI).</p>
+  </div>
+
+  <!-- Image Upload Container -->
+  <div class="upload-container">
+    <span style="font-size: 40px; display: block; margin-bottom: 10px;">🩺</span>
+    <p style="font-weight: 600; color: var(--secondary); margin-bottom: 8px;">Upload Canopy Image for Diagnostics</p>
+    <input type="file" id="health-image-file" class="file-input" accept="image/*">
+    <button onclick="analyzeForestHealth()" class="btn btn-primary" style="margin-top: 10px;">Run Diagnostics Model</button>
+  </div>
+
+  <!-- Interactive Mask Comparison -->
+  <h3 style="font-size: 18px; color: var(--primary); margin: 24px 0 12px 0; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Segmentation Conditions</h3>
+  <div class="image-comparison">
+    <div class="image-panel">
+      <h3>Original Image</h3>
+      <img id="orig-img" src="/images/treeicon.png" alt="Original Forest Canopy" style="min-height: 250px; object-fit: contain;">
+    </div>
+    <div class="image-panel">
+      <h3>Health Classification Mask</h3>
+      <canvas id="health-mask-canvas" style="min-height: 250px; width: 100%; object-fit: contain; background: #f1f5f9; border-radius: var(--radius-sm);"></canvas>
+    </div>
+  </div>
+
+  <!-- Metrics Dashboard Section -->
+  <h3 style="font-size: 18px; color: var(--primary); margin: 24px 0 12px 0; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Health Diagnostics Summary</h3>
+  
+  <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 24px; align-items: center;">
+    <!-- Circular gauge for Forest Health Index -->
+    <div class="card fhi-gauge-container">
+      <div class="fhi-ring">
+        <svg>
+          <circle class="fhi-circle-bg" cx="70" cy="70" r="64"></circle>
+          <circle id="fhi-fill" class="fhi-circle-fill" cx="70" cy="70" r="64"></circle>
+        </svg>
+        <div class="fhi-value-text" id="fhi-value">0</div>
+      </div>
+      <div class="fhi-label">Forest Health Score</div>
+    </div>
+
+    <!-- Health Breakdown Metric Cards -->
+    <div>
+      <div class="stats-grid" style="grid-template-columns: 1fr 1fr; margin: 0 0 16px 0;">
+        <div class="metric-card" style="border-left-color: #38b000; background: rgba(56, 176, 0, 0.08);">
+          <div class="metric-label" style="color: #2b8000;">💚 Healthy Canopy</div>
+          <div class="metric-value" style="color: #1e5a00;" id="pct-healthy">0.0%</div>
+        </div>
+        <div class="metric-card" style="border-left-color: #f7b23b; background: rgba(247, 178, 59, 0.08);">
+          <div class="metric-label" style="color: #c08018;">💛 Stressed Canopy</div>
+          <div class="metric-value" style="color: #925f0e;" id="pct-stressed">0.0%</div>
+        </div>
+      </div>
+      <div class="stats-grid" style="grid-template-columns: 1fr; margin: 0;">
+        <div class="metric-card" style="border-left-color: #e07a5f; background: rgba(224, 122, 95, 0.08);">
+          <div class="metric-label" style="color: #c95a3b;">🤎 Bare Soil / Deforestation / Shaded Areas</div>
+          <div class="metric-value" style="color: #a83d20;" id="pct-soil">0.0%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recommendation Banner -->
+  <div class="recommendation-banner" id="recommendation-box" style="display: none;">
+    <strong>Recommendations:</strong> <span id="recommendation-text">Waiting for diagnostic results...</span>
+  </div>
+</div>
+
+<script>
+// RGB to HSL conversion helper
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+
+  if (max === min) {
+    h = s = 0; 
+  } else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+      case g: h = (b - r) / d + 2; break;
+      case b: h = (r - g) / d + 4; break;
+    }
+    h /= 6;
+  }
+  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+}
+
+function analyzeForestHealth() {
+  const fileInput = document.getElementById('health-image-file');
+  const file = fileInput.files[0];
+  if (!file) {
+    alert("Please select a canopy image file to analyze.");
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onloadend = () => {
+    const origImg = document.getElementById('orig-img');
+    origImg.src = reader.result;
+
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.getElementById('health-mask-canvas');
+      const ctx = canvas.getContext('2d');
+
+      // Set canvas size matching the image dimensions
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+
+      let healthyCount = 0;
+      let stressedCount = 0;
+      let soilCount = 0;
+
+      // Color classification loops
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i+1];
+        const b = data[i+2];
+
+        const [h, s, l] = rgbToHsl(r, g, b);
+
+        // Classification Rules
+        if (l < 12 || l > 88 || (s < 16 && l < 60)) {
+          // Shadows, soil, non-vegetative: Dark grey/brown mask
+          data[i] = 120;     // Red
+          data[i+1] = 90;    // Green
+          data[i+2] = 80;    // Blue
+          soilCount++;
+        } else if (h >= 75 && h <= 165 && s > 15) {
+          // Healthy forest canopy: Green mask
+          data[i] = 40;
+          data[i+1] = 180;
+          data[i+2] = 50;
+          healthyCount++;
+        } else if (h >= 35 && h < 75 && s > 15) {
+          // Chlorotic/stressed canopy: Yellow/Orange mask
+          data[i] = 245;
+          data[i+1] = 180;
+          data[i+2] = 30;
+          stressedCount++;
+        } else {
+          // Bare land, soil: Brown mask
+          data[i] = 200;
+          data[i+1] = 80;
+          data[i+2] = 60;
+          soilCount++;
+        }
+      }
+
+      // Draw the segmented visual condition mask
+      ctx.putImageData(imageData, 0, 0);
+
+      // Calculations
+      const totalPixels = canvas.width * canvas.height;
+      const pctHealthyVal = ((healthyCount / totalPixels) * 100);
+      const pctStressedVal = ((stressedCount / totalPixels) * 100);
+      const pctSoilVal = ((soilCount / totalPixels) * 100);
+
+      // FHI Score Calculation
+      const fhiScore = Math.min(100, Math.round(pctHealthyVal + (0.45 * pctStressedVal)));
+
+      // Render numeric values
+      document.getElementById('pct-healthy').textContent = pctHealthyVal.toFixed(1) + '%';
+      document.getElementById('pct-stressed').textContent = pctStressedVal.toFixed(1) + '%';
+      document.getElementById('pct-soil').textContent = pctSoilVal.toFixed(1) + '%';
+      document.getElementById('fhi-value').textContent = fhiScore;
+
+      // Update circular progress svg fill
+      const fhiFill = document.getElementById('fhi-fill');
+      // Circle perimeter = 2 * PI * r = 2 * 3.14159 * 64 ≈ 402
+      const offset = 402 - (fhiScore / 100) * 402;
+      fhiFill.style.strokeDashoffset = offset;
+
+      // Adjust color of ring based on score
+      if (fhiScore >= 80) {
+        fhiFill.style.stroke = '#38b000'; // Green
+      } else if (fhiScore >= 50) {
+        fhiFill.style.stroke = '#f7b23b'; // Yellow/Orange
+      } else {
+        fhiFill.style.stroke = '#e07a5f'; // Red/Coral
+      }
+
+      // Populate Recommendations
+      const recommendationBox = document.getElementById('recommendation-box');
+      const recommendationText = document.getElementById('recommendation-text');
+      
+      let recs = '';
+      if (fhiScore >= 80) {
+        recs = 'Excellent ecosystem health! The canopy demonstrates high chlorophyll levels and dense vegetative structures. Continue regular satellite monitoring to track potential seasonal shifts.';
+        recommendationBox.style.borderLeftColor = '#38b000';
+      } else if (fhiScore >= 50) {
+        recs = 'Moderate canopy stress detected. Yellowish/chlorotic patterns indicate minor dry spell stresses or soil nutrient imbalances in specific zones. Reforestation checks and hydration reviews are recommended.';
+        recommendationBox.style.borderLeftColor = '#f7b23b';
+      } else {
+        recs = 'Alert: Low Forest Health index. High concentration of bare land or shaded soil spots indicates significant canopy degradation, deforestation risk, or extreme hydration stress. Active ecological restoration and tree plantation interventions are highly advised.';
+        recommendationBox.style.borderLeftColor = '#e07a5f';
+      }
+      recommendationText.textContent = recs;
+      recommendationBox.style.display = 'block';
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+</script>
+
+</body>
+</html>
