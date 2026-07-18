@@ -37,7 +37,7 @@ The project includes a website with a landing page and a dashboard offering the 
 </center>
 
 ## Getting Started
-To start using the tools, visit the website and navigate to the dashboard [here.](https://treesense.vipulchaturvedi.com/predict)
+To start using the tools, run the project locally (e.g. by starting the server in the `treesense` directory using `npm start`) and navigate to the dashboard.
 
 ## Contributions
 Contributions are welcome! Please open a PR to get started on contributing to the project.
