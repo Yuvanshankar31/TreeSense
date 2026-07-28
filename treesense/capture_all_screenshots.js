@@ -52,6 +52,7 @@ async function run() {
     await new Promise(r => setTimeout(r, 6000)); // Wait for YOLOv8 model loading
     
     // Find the file input inside the iframe
+    console.log('Uploading sample image to Tree Count...');
     const fileInput = await frame.$('input[type="file"]');
     if (fileInput) {
       await fileInput.uploadFile(sampleImage);
@@ -69,14 +70,22 @@ async function run() {
   // 4. Green Cover Estimator
   console.log('Processing Green Cover Estimator...');
   await page.click('#segmentation-button');
+  console.log('Waiting for iframe to change to object_segmentation.html...');
+  await page.waitForFunction(() => {
+    const iframe = document.querySelector('#model-iframe');
+    return iframe && iframe.src.includes('object_segmentation.html');
+  }, { timeout: 5000 });
   await new Promise(r => setTimeout(r, 2000));
+
   iframeElement = await page.$('#model-iframe');
   frame = await iframeElement.contentFrame();
   if (frame) {
+    console.log('Uploading image to Green Cover Estimator...');
     const fileInput = await frame.$('#image-file');
     if (fileInput) {
       await fileInput.uploadFile(sampleImage);
       // Click Process Canopy Image button
+      console.log('Clicking Process Canopy Image button...');
       await frame.evaluate(() => {
         const buttons = Array.from(document.querySelectorAll('button'));
         const processBtn = buttons.find(b => b.innerText.includes('Process Canopy Image'));
@@ -93,14 +102,22 @@ async function run() {
   // 5. Optimal Pathing
   console.log('Processing Optimal Pathing...');
   await page.click('#path-button');
+  console.log('Waiting for iframe to change to optimal_path.html...');
+  await page.waitForFunction(() => {
+    const iframe = document.querySelector('#model-iframe');
+    return iframe && iframe.src.includes('optimal_path.html');
+  }, { timeout: 5000 });
   await new Promise(r => setTimeout(r, 2000));
+
   iframeElement = await page.$('#model-iframe');
   frame = await iframeElement.contentFrame();
   if (frame) {
+    console.log('Uploading image to Optimal Pathing...');
     const fileInput = await frame.$('#image-file');
     if (fileInput) {
       await fileInput.uploadFile(sampleImage);
       // Click Process Pathway Map button
+      console.log('Clicking Process Pathway Map button...');
       await frame.evaluate(() => {
         const buttons = Array.from(document.querySelectorAll('button'));
         const processBtn = buttons.find(b => b.innerText.includes('Process Pathway Map'));
@@ -117,17 +134,27 @@ async function run() {
   // 6. Historical Data
   console.log('Processing Historical Data...');
   await page.click('#historical-button');
+  console.log('Waiting for iframe to change to historical_data.html...');
+  await page.waitForFunction(() => {
+    const iframe = document.querySelector('#model-iframe');
+    return iframe && iframe.src.includes('historical_data.html');
+  }, { timeout: 5000 });
   await new Promise(r => setTimeout(r, 2000));
+
   iframeElement = await page.$('#model-iframe');
   frame = await iframeElement.contentFrame();
   if (frame) {
     // Fill in Coimbatore, IN and retrieve weather
+    console.log('Finding location input...');
     const locationInput = await frame.$('#location');
     if (locationInput) {
       // Clear and type
+      console.log('Clearing and typing Coimbatore, IN...');
       await frame.evaluate(el => el.value = '', locationInput);
       await locationInput.type('Coimbatore, IN');
+      console.log('Clicking Retrieve Weather...');
       await frame.click('#get-weather');
+      console.log('Waiting for weather retrieval API & charts...');
       await new Promise(r => setTimeout(r, 5000)); // Wait for API response and chart drawing
       await page.screenshot({ path: path.join(screenshotsDir, 'historical_data.png') });
       console.log('Saved historical_data.png');
