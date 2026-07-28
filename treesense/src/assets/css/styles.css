@@ -1,5 +1,5 @@
 /* ==========================================================================
-   TreeSense Imaging - Modern Eco-Tech Design System
+   GreenPulse Imaging - Modern Eco-Tech Design System
    ========================================================================== */
 
 /* Google Fonts Import - Premium Sans-serif */
@@ -629,3 +629,226 @@ img {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   Home Page Visual Enhancements (Hero Grid, Canvas, Selector, Stats)
+   ========================================================================== */
+
+.hero-relative {
+  position: relative;
+  overflow: hidden;
+  padding: 60px 0;
+}
+
+.hero-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 40px;
+  align-items: center;
+  text-align: left;
+  position: relative;
+  z-index: 2;
+}
+
+.hero-text-side {
+  display: flex;
+  flex-direction: column;
+}
+
+.location-selector {
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px;
+  margin-top: 24px;
+  backdrop-filter: blur(8px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 480px;
+  box-shadow: var(--shadow-sm);
+}
+
+.location-selector label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.location-select {
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  background: #ffffff;
+  cursor: pointer;
+  outline: none;
+  transition: var(--transition-fast);
+}
+
+.location-select:focus {
+  border-color: var(--accent);
+}
+
+.location-coordinates {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
+  display: flex;
+  gap: 12px;
+}
+
+.live-metrics-card {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid rgba(46, 196, 182, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow-md);
+  position: relative;
+  overflow: hidden;
+}
+
+.live-metrics-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(to bottom, var(--accent), var(--secondary));
+}
+
+.metrics-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.metrics-header h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--secondary);
+  margin: 0;
+}
+
+.metrics-badge {
+  background: var(--success-bg);
+  color: var(--success);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.metrics-pulse-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--success);
+  border-radius: 50%;
+  animation: metric-ping 1.5s infinite ease-in-out;
+}
+
+@keyframes metric-ping {
+  0% { transform: scale(0.8); opacity: 1; }
+  50% { transform: scale(1.4); opacity: 0.5; }
+  100% { transform: scale(0.8); opacity: 1; }
+}
+
+.metrics-grid-compact {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.metric-box {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition-fast);
+}
+
+.metric-box:hover {
+  transform: translateY(-2px);
+  border-color: rgba(46, 196, 182, 0.4);
+}
+
+.metric-box-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+.metric-box-num {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--primary);
+  margin-top: 4px;
+}
+
+.metric-box-status {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* Tool Badges */
+.tool-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  display: inline-block;
+}
+
+.tool-badge.analytics { background: rgba(0, 119, 182, 0.08); color: #0077b6; }
+.tool-badge.ml { background: rgba(56, 176, 0, 0.08); color: #38b000; }
+.tool-badge.geo { background: rgba(142, 204, 23, 0.08); color: #729c13; }
+
+@media (max-width: 992px) {
+  .hero-grid {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    text-align: center;
+  }
+  .location-selector {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .hero-text-side {
+    align-items: center;
+  }
+}
+

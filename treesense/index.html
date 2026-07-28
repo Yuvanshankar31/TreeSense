@@ -4,20 +4,20 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
   <meta name="description" content="Your solution for accurate tree enumeration">
-  <title>TreeSense Imaging - Advanced Forestry Analytics</title>
+  <title>GreenPulse Imaging - Advanced Forestry Analytics</title>
 
   <!-- Open Graph -->
-  <meta property="og:site_name" content="TreeSense Imaging">
-  <meta property="og:title" content="TreeSense Imaging">
-  <meta property="og:url" content="https://github.com/Yuvanshankar31/TreeSense">
+  <meta property="og:site_name" content="GreenPulse Imaging">
+  <meta property="og:title" content="GreenPulse Imaging">
+  <meta property="og:url" content="https://github.com/Yuvanshankar31/GreenPulse">
   <meta property="og:type" content="website">
   <meta property="og:description" content="Your solution for accurate tree enumeration">
   <meta property="og:image" content="https://i.imgur.com/43l43ve.png">
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary">
-  <meta name="twitter:site" content="https://github.com/Yuvanshankar31/TreeSense">
-  <meta name="twitter:title" content="TreeSense Imaging">
+  <meta name="twitter:site" content="https://github.com/Yuvanshankar31/GreenPulse">
+  <meta name="twitter:title" content="GreenPulse Imaging">
   <meta name="twitter:description" content="Your solution for accurate tree enumeration">
   <meta name="twitter:image:src" content="https://i.imgur.com/43l43ve.png">
 
@@ -28,6 +28,7 @@
 
   <!-- Stylesheets -->
   <link rel="stylesheet" href="/src/assets/css/styles.css">
+  <link rel="stylesheet" href="/src/assets/css/chatbot.css">
 </head>
 <body>
 
@@ -35,8 +36,8 @@
   <header class="site-header">
     <div class="container header-container">
       <a href="/index.html" class="logo-link">
-        <img src="/images/treeicon.png" class="logo-image" alt="TreeSense Imaging logo">
-        <span class="logo-text">TreeSense</span>
+        <img src="/images/treeicon.png" class="logo-image" alt="GreenPulse Imaging logo">
+        <span class="logo-text">GreenPulse</span>
       </a>
       
       <!-- Desktop Navigation -->
@@ -58,39 +59,107 @@
   </header>
 
   <!-- Main Content -->
-  <main class="container" style="flex: 1; padding: 40px 24px;">
+  <main class="container" style="flex: 1; padding: 40px 24px; position: relative; z-index: 1;">
 
-    <!-- Hero Section -->
-    <section class="hero">
-      <h1 class="hero-title">Your Solution for Accurate Tree Enumeration</h1>
-      <p class="hero-description">TreeSense is an advanced service for Tree Enumeration and Forestry Analytics, providing deep visual insights and interactive dashboards to monitor green cover and environmental metrics.</p>
-      <a href="/predict.html" class="btn btn-primary">Open Analytics Dashboard</a>
+    <!-- Upgraded Interactive Hero Section -->
+    <section class="hero-relative">
+      <canvas id="heroCanvas" class="hero-canvas"></canvas>
+      <div class="hero-grid">
+        <!-- Left Side: Copy and Location Picker -->
+        <div class="hero-text-side">
+          <h1 class="hero-title">Your Solution for Accurate Tree Enumeration</h1>
+          <p class="hero-description">GreenPulse is an advanced service for Tree Enumeration and Forestry Analytics, providing deep visual insights and interactive dashboards to monitor green cover and environmental metrics.</p>
+          
+          <!-- Interactive Location Selector -->
+          <div class="location-selector">
+            <label for="reserve-location">Select Forest Reserve Target Zone</label>
+            <select id="reserve-location" class="location-select">
+              <option value="coimbatore">Coimbatore Forest Reserve, IN</option>
+              <option value="bhopal">Bhopal Canopy Area, IN</option>
+              <option value="silent_valley">Silent Valley National Park, IN</option>
+              <option value="mudumalai">Mudumalai Wildlife Reserve, IN</option>
+            </select>
+            <div class="location-coordinates">
+              <span id="coord-lat">Latitude: 11.0168° N</span>
+              <span id="coord-lon">Longitude: 76.9558° E</span>
+            </div>
+          </div>
+          
+          <div style="margin-top: 28px;">
+            <a href="/predict.html" class="btn btn-primary" style="padding: 14px 28px; font-size: 16px;">Open Analytics Dashboard</a>
+          </div>
+        </div>
+
+        <!-- Right Side: Live Metrics Dashboard Panel -->
+        <div class="live-metrics-card">
+          <div class="metrics-header">
+            <h3>Reserve Survey Metrics</h3>
+            <div class="metrics-badge">
+              <span class="metrics-pulse-dot"></span>
+              Live Monitoring
+            </div>
+          </div>
+          
+          <div class="metrics-grid-compact">
+            <div class="metric-box">
+              <div class="metric-box-title">Trees Counted</div>
+              <div class="metric-box-num" id="stat-trees">0</div>
+              <div class="metric-box-status" id="stat-trees-status">Analyzing...</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-box-title">Green Canopy</div>
+              <div class="metric-box-num" id="stat-cover">0%</div>
+              <div class="metric-box-status" id="stat-cover-status">Analyzing...</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-box-title">Health Index</div>
+              <div class="metric-box-num" id="stat-fhi">0</div>
+              <div class="metric-box-status" id="stat-fhi-status">Analyzing...</div>
+            </div>
+            <div class="metric-box">
+              <div class="metric-box-title">Carbon Offset</div>
+              <div class="metric-box-num" id="stat-co2">0 T</div>
+              <div class="metric-box-status">Annual Absorption</div>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
 
-    <!-- Stats / Features Section -->
-    <section class="stats-container" style="padding: 40px 0;">
+    <!-- Upgraded Stats / Features Section -->
+    <section class="stats-container" style="padding: 60px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px;">
       <div class="card stat-card">
-        <span class="stat-icon">🌲</span>
-        <h3 class="stat-title">Efficient Image Processing</h3>
-        <p class="stat-description">Utilize state-of-the-art YOLOv8 object detection algorithms to detect, count, and evaluate tree distributions with speed and precision.</p>
+        <span class="tool-badge ml">Machine Learning</span>
+        <h3 class="stat-title" style="font-size: 18px; color: var(--secondary); margin-bottom: 8px;">🌲 Tree Count (YOLOv8)</h3>
+        <p class="stat-description" style="font-size: 14px; margin: 0; line-height: 1.5; color: var(--text-muted);">Utilize state-of-the-art YOLOv8 object detection algorithms to detect, count, and evaluate tree distributions with speed and precision.</p>
       </div>
       <div class="card stat-card">
-        <span class="stat-icon">🍃</span>
-        <h3 class="stat-title">Green Cover Estimation</h3>
-        <p class="stat-description">Calculate green canopy metrics and isolate idle lands automatically using channel-based color segmentation tools.</p>
+        <span class="tool-badge analytics">Computer Vision</span>
+        <h3 class="stat-title" style="font-size: 18px; color: var(--secondary); margin-bottom: 8px;">🍃 Green Cover Estimator</h3>
+        <p class="stat-description" style="font-size: 14px; margin: 0; line-height: 1.5; color: var(--text-muted);">Calculate green canopy metrics and isolate idle lands automatically using channel-based color segmentation tools.</p>
       </div>
       <div class="card stat-card">
-        <span class="stat-icon">📈</span>
-        <h3 class="stat-title">Valuable Eco-Insights</h3>
-        <p class="stat-description">Correlate canopy changes with rainfall departure, local air quality trends, and seasonal soil pH variations to make data-backed planning choices.</p>
+        <span class="tool-badge geo">Geographic Map</span>
+        <h3 class="stat-title" style="font-size: 18px; color: var(--secondary); margin-bottom: 8px;">🗺️ Tree Species Identifier</h3>
+        <p class="stat-description" style="font-size: 14px; margin: 0; line-height: 1.5; color: var(--text-muted);">Draw boundaries directly on high-resolution maps to isolate vegetation crops and identify local species patterns.</p>
+      </div>
+      <div class="card stat-card">
+        <span class="tool-badge geo">Pathfinding</span>
+        <h3 class="stat-title" style="font-size: 18px; color: var(--secondary); margin-bottom: 8px;">🧭 Optimal Path Planning</h3>
+        <p class="stat-description" style="font-size: 14px; margin: 0; line-height: 1.5; color: var(--text-muted);">Calculate minimal-friction routes across dense forest terrains, avoiding cliffs and maximizing ranger patrol safety.</p>
+      </div>
+      <div class="card stat-card">
+        <span class="tool-badge analytics">Color Analytics</span>
+        <h3 class="stat-title" style="font-size: 18px; color: var(--secondary); margin-bottom: 8px;">🩺 Forest Health Analyzer</h3>
+        <p class="stat-description" style="font-size: 14px; margin: 0; line-height: 1.5; color: var(--text-muted);">Evaluate vegetative stress (Healthy, Stressed, Bare Soil) using pixel HSL color filters and calculate overall canopy health.</p>
+      </div>
+      <div class="card stat-card">
+        <span class="tool-badge ml">Data Science</span>
+        <h3 class="stat-title" style="font-size: 18px; color: var(--secondary); margin-bottom: 8px;">📈 Meteorological Charts</h3>
+        <p class="stat-description" style="font-size: 14px; margin: 0; line-height: 1.5; color: var(--text-muted);">Access historical rainfall departures, temperature averages, and live air quality indexes mapped over historical ranges.</p>
       </div>
     </section>
 
-    <!-- Panoramic View Section -->
-    <section class="card" style="padding: 20px; text-align: center; margin-bottom: 60px; background: rgba(255, 255, 255, 0.4);">
-      <h3 style="margin-bottom: 20px; color: var(--secondary);">High-Resolution Panoramic Imagery</h3>
-      <img src="/images/panaromic.png" alt="Panoramic view of target survey forest" class="panoramic-img" style="border-radius: var(--radius-md); box-shadow: var(--shadow-sm); width: 100%; object-fit: cover; max-height: 380px;">
-    </section>
   </main>
 
   <!-- Unified Footer -->
@@ -100,7 +169,7 @@
         <div class="footer-brand">
           <h3>
             <img src="/images/treeicon.png" alt="Logo">
-            TreeSense Imaging
+            GreenPulse Imaging
           </h3>
           <p>Advancing ecological monitoring and automated forestry analytics with machine learning and satellite intelligence.</p>
         </div>
@@ -119,7 +188,7 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <p>&copy; 2026 TreeSense Imaging. All rights reserved.</p>
+        <p>&copy; 2026 GreenPulse Imaging. All rights reserved.</p>
         <p>Made with 💚 by Yuvan Shankar and Tharuna.</p>
       </div>
     </div>
@@ -127,5 +196,212 @@
 
   <!-- Scripts -->
   <script src="/src/assets/js/script.js" async></script> 
+  <script src="/src/assets/js/chatbot.js" defer></script> 
+
+  <!-- Interactive Scripts for HTML5 Canvas and Metrics Counter -->
+  <script>
+    // HTML5 Canvas Floating Eco-Particle Simulation
+    (function () {
+      const canvas = document.getElementById('heroCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let width = canvas.width = canvas.offsetWidth;
+      let height = canvas.height = canvas.offsetHeight;
+      
+      const particles = [];
+      const particleCount = 45;
+      
+      class Particle {
+        constructor() {
+          this.x = Math.random() * width;
+          this.y = Math.random() * height;
+          this.size = Math.random() * 4 + 1;
+          this.speedX = Math.random() * 0.4 - 0.2;
+          this.speedY = Math.random() * -0.5 - 0.1; // Float upwards gently
+          this.opacity = Math.random() * 0.4 + 0.1;
+        }
+        update() {
+          this.x += this.speedX;
+          this.y += this.speedY;
+          if (this.y < 0) {
+            this.y = height;
+            this.x = Math.random() * width;
+          }
+          if (this.x < 0 || this.x > width) {
+            this.speedX = -this.speedX;
+          }
+        }
+        draw() {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(46, 196, 182, ${this.opacity})`;
+          ctx.shadowBlur = 4;
+          ctx.shadowColor = '#2ec4b6';
+          ctx.fill();
+        }
+      }
+      
+      for (let i = 0; i < particleCount; i++) {
+        particles.push(new Particle());
+      }
+      
+      function animate() {
+        ctx.clearRect(0, 0, width, height);
+        ctx.shadowBlur = 0; // reset shadow
+        particles.forEach(p => {
+          p.update();
+          p.draw();
+        });
+        requestAnimationFrame(animate);
+      }
+      
+      window.addEventListener('resize', () => {
+        width = canvas.width = canvas.offsetWidth;
+        height = canvas.height = canvas.offsetHeight;
+      });
+      
+      animate();
+    })();
+
+    // Location Config & Live Counting Scripts
+    document.addEventListener("DOMContentLoaded", () => {
+      const locations = {
+        coimbatore: {
+          lat: "11.0168° N",
+          lon: "76.9558° E",
+          latVal: "11.0168",
+          lonVal: "76.9558",
+          label: "Coimbatore Forest Reserve",
+          trees: 1245,
+          cover: 82.4,
+          fhi: 8.2,
+          co2: 49200,
+          treesStatus: "High Density",
+          coverStatus: "Dense Canopy",
+          fhiStatus: "Healthy / Vigorous"
+        },
+        bhopal: {
+          lat: "23.2599° N",
+          lon: "77.4126° E",
+          latVal: "23.2599",
+          lonVal: "77.4126",
+          label: "Bhopal Canopy Area",
+          trees: 948,
+          cover: 71.5,
+          fhi: 7.1,
+          co2: 42900,
+          treesStatus: "Moderate Density",
+          coverStatus: "Moderate Canopy",
+          fhiStatus: "Healthy Status"
+        },
+        silent_valley: {
+          lat: "11.1300° N",
+          lon: "76.4300° E",
+          latVal: "11.1300",
+          lonVal: "76.4300",
+          label: "Silent Valley National Park",
+          trees: 1510,
+          cover: 85.1,
+          fhi: 8.9,
+          co2: 51000,
+          treesStatus: "Very High Density",
+          coverStatus: "Dense Rain Forest",
+          fhiStatus: "Pristine Health"
+        },
+        mudumalai: {
+          lat: "11.5623° N",
+          lon: "76.6291° E",
+          latVal: "11.5623",
+          lonVal: "76.6291",
+          label: "Mudumalai Wildlife Reserve",
+          trees: 822,
+          cover: 64.3,
+          fhi: 6.8,
+          co2: 38500,
+          treesStatus: "Scattered Stands",
+          coverStatus: "Deciduous Canopy",
+          fhiStatus: "Stable Health"
+        }
+      };
+
+      const select = document.getElementById("reserve-location");
+      const coordLat = document.getElementById("coord-lat");
+      const coordLon = document.getElementById("coord-lon");
+      
+      const statTrees = document.getElementById("stat-trees");
+      const statTreesStatus = document.getElementById("stat-trees-status");
+      const statCover = document.getElementById("stat-cover");
+      const statCoverStatus = document.getElementById("stat-cover-status");
+      const statFhi = document.getElementById("stat-fhi");
+      const statFhiStatus = document.getElementById("stat-fhi-status");
+      const statCo2 = document.getElementById("stat-co2");
+
+      let currentIntervals = {};
+
+      function animateCounter(element, target, prefix = "", suffix = "", decimal = 0) {
+        clearInterval(currentIntervals[element.id]);
+        let start = 0;
+        const duration = 1000;
+        const stepTime = 20;
+        const steps = duration / stepTime;
+        const increment = (target - start) / steps;
+        
+        let current = start;
+        let count = 0;
+
+        currentIntervals[element.id] = setInterval(() => {
+          current += increment;
+          count++;
+          if (count >= steps) {
+            element.innerText = prefix + target.toFixed(decimal) + suffix;
+            clearInterval(currentIntervals[element.id]);
+          } else {
+            element.innerText = prefix + current.toFixed(decimal) + suffix;
+          }
+        }, stepTime);
+      }
+
+      function updateReserveData(key) {
+        const data = locations[key];
+        
+        // Save to LocalStorage
+        localStorage.setItem("selectedLatitude", data.latVal);
+        localStorage.setItem("selectedLongitude", data.lonVal);
+        localStorage.setItem("selectedLocation", data.label);
+
+        // Update Coordinate Labels
+        coordLat.innerText = `Latitude: ${data.lat}`;
+        coordLon.innerText = `Longitude: ${data.lon}`;
+
+        // Animate Stat counters
+        animateCounter(statTrees, data.trees);
+        animateCounter(statCover, data.cover, "", "%", 1);
+        animateCounter(statFhi, data.fhi, "", "", 1);
+        animateCounter(statCo2, data.co2, "", " T");
+
+        // Set status text
+        statTreesStatus.innerText = data.treesStatus;
+        statCoverStatus.innerText = data.coverStatus;
+        statFhiStatus.innerText = data.fhiStatus;
+      }
+
+      // Read from LocalStorage or fallback to default
+      const savedLat = localStorage.getItem("selectedLatitude") || "11.0168";
+      let matchedKey = "coimbatore";
+      for (const k in locations) {
+        if (locations[k].latVal === savedLat) {
+          matchedKey = k;
+          break;
+        }
+      }
+
+      select.value = matchedKey;
+      updateReserveData(matchedKey);
+
+      select.addEventListener("change", (e) => {
+        updateReserveData(e.target.value);
+      });
+    });
+  </script>
 </body>
 </html>

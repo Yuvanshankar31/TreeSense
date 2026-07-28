@@ -130,6 +130,159 @@ function processImage() {
 
       ctx.putImageData(imageData, 0, 0);
 
+      // 1. Build downsampled cost grid for fast and efficient pathfinding
+      const cols = 60;
+      const rows = 60;
+      const costGrid = [];
+      for (let c = 0; c < cols; c++) {
+        costGrid[c] = new Array(rows).fill(1);
+      }
+
+      const blockWidth = Math.ceil(canvas.width / cols);
+      const blockHeight = Math.ceil(canvas.height / rows);
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          let blackPixels = 0;
+          let totalPixels = 0;
+          const xStart = c * blockWidth;
+          const xEnd = Math.min((c + 1) * blockWidth, canvas.width);
+          const yStart = r * blockHeight;
+          const yEnd = Math.min((r + 1) * blockHeight, canvas.height);
+
+          for (let y = yStart; y < yEnd; y++) {
+            for (let x = xStart; x < xEnd; x++) {
+              const pixelIdx = (y * canvas.width + x) * 4;
+              if (imageData.data[pixelIdx] === 0) { // black pixel (canopy)
+                blackPixels++;
+              }
+              totalPixels++;
+            }
+          }
+          const blackRatio = totalPixels > 0 ? (blackPixels / totalPixels) : 0;
+          // Canopy represents obstacle cost (25), open paths represent normal cost (1)
+          costGrid[c][r] = blackRatio > 0.4 ? 25 : 1;
+        }
+      }
+
+      // 2. Optimized A* pathfinding implementation
+      function getHash(x, y) { return `${x},${y}`; }
+
+      // Octile distance heuristic for 8-directional diagonal movement grids
+      function octileHeuristic(x1, y1, x2, y2) {
+        const dx = Math.abs(x1 - x2);
+        const dy = Math.abs(y1 - y2);
+        return (dx + dy) + (Math.SQRT2 - 2) * Math.min(dx, dy);
+      }
+
+      function findPath(costGrid, startX, startY, endX, endY) {
+        const openSet = [{ x: startX, y: startY }];
+        const closedSet = new Set();
+        const gScore = {};
+        const fScore = {};
+        const cameFrom = {};
+
+        const startHash = getHash(startX, startY);
+        gScore[startHash] = 0;
+        fScore[startHash] = octileHeuristic(startX, startY, endX, endY);
+
+        while (openSet.length > 0) {
+          // Efficient O(N) linear scan to extract node with lowest f score
+          let lowestIdx = 0;
+          let lowestF = fScore[getHash(openSet[0].x, openSet[0].y)] ?? Infinity;
+          for (let i = 1; i < openSet.length; i++) {
+            const fVal = fScore[getHash(openSet[i].x, openSet[i].y)] ?? Infinity;
+            if (fVal < lowestF) {
+              lowestF = fVal;
+              lowestIdx = i;
+            }
+          }
+
+          const current = openSet.splice(lowestIdx, 1)[0];
+          const currentHash = getHash(current.x, current.y);
+
+          if (current.x === endX && current.y === endY) {
+            const path = [];
+            let temp = current;
+            while (temp) {
+              path.push([temp.x, temp.y]);
+              temp = cameFrom[getHash(temp.x, temp.y)];
+            }
+            return path.reverse();
+          }
+
+          closedSet.add(currentHash);
+
+          // 8 neighbor directions
+          const directions = [
+            [-1, 0], [1, 0], [0, -1], [0, 1],
+            [-1, -1], [-1, 1], [1, -1], [1, 1]
+          ];
+
+          for (const [dx, dy] of directions) {
+            const nx = current.x + dx;
+            const ny = current.y + dy;
+
+            if (nx >= 0 && nx < cols && ny >= 0 && ny < rows) {
+              const neighborHash = getHash(nx, ny);
+              if (closedSet.has(neighborHash)) continue;
+
+              const isDiagonal = dx !== 0 && dy !== 0;
+              const moveCost = isDiagonal ? Math.SQRT2 : 1.0;
+              const cellCost = costGrid[nx][ny];
+              const tentativeGScore = gScore[currentHash] + (cellCost * moveCost);
+
+              const neighborG = gScore[neighborHash] ?? Infinity;
+              if (tentativeGScore < neighborG) {
+                cameFrom[neighborHash] = current;
+                gScore[neighborHash] = tentativeGScore;
+                fScore[neighborHash] = tentativeGScore + octileHeuristic(nx, ny, endX, endY);
+
+                if (!openSet.some(node => node.x === nx && node.y === ny)) {
+                  openSet.push({ x: nx, y: ny });
+                }
+              }
+            }
+          }
+        }
+        return null;
+      }
+
+      // Find path from top-left (0,0) to bottom-right (cols-1, rows-1)
+      const path = findPath(costGrid, 0, 0, cols - 1, rows - 1);
+
+      // 3. Draw computed path onto canvas
+      if (path && path.length > 0) {
+        ctx.beginPath();
+        ctx.strokeStyle = '#e07a5f'; // beautiful primary accent path color matching UI theme
+        ctx.lineWidth = Math.max(Math.round(canvas.width / 120), 4);
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        path.forEach((pt, idx) => {
+          const px = (pt[0] + 0.5) * (canvas.width / cols);
+          const py = (pt[1] + 0.5) * (canvas.height / rows);
+          if (idx === 0) {
+            ctx.moveTo(px, py);
+          } else {
+            ctx.lineTo(px, py);
+          }
+        });
+        ctx.stroke();
+
+        // Draw start icon
+        ctx.beginPath();
+        ctx.fillStyle = '#38b000';
+        ctx.arc((path[0][0] + 0.5) * (canvas.width / cols), (path[0][1] + 0.5) * (canvas.height / rows), ctx.lineWidth * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw destination icon
+        ctx.beginPath();
+        ctx.fillStyle = '#a83d20';
+        ctx.arc((path[path.length - 1][0] + 0.5) * (canvas.width / cols), (path[path.length - 1][1] + 0.5) * (canvas.height / rows), ctx.lineWidth * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
       // Display the processed image and green cover percentage
       processedImage.src = canvas.toDataURL();
       const greenPercentVal = ((blackPixelCount / (canvas.width * canvas.height)) * 100).toFixed(2);

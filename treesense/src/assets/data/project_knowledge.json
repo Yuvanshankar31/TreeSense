@@ -1,0 +1,72 @@
+[
+  {
+    "id": "reserve_overview",
+    "title": "GreenPulse Forest Reserve Overview",
+    "category": "general",
+    "tags": ["reserve", "overview", "area", "location", "greenpulse", "forest", "geography"],
+    "content": "The GreenPulse Forest Reserve is a protected conservation zone located along the biodiverse Western Ghats region. It covers a total geographical area of 12,500 hectares. The reserve is characterized by mountainous terrain ranging from 600m to 1,200m in altitude, serving as a critical ecological corridor that supports rich native flora and fauna, and records an average forest canopy density of 78%."
+  },
+  {
+    "id": "tree_enumeration",
+    "title": "Tree Enumeration & Counts (Sector-wise)",
+    "category": "metrics",
+    "tags": ["tree count", "enumeration", "sector", "density", "total trees", "statistics"],
+    "content": "Using advanced aerial imaging and YOLOv8 object detection, the reserve is divided into sectors for tree counting: Sector A (North Reserve) has 1,245 trees detected; Sector B (East Ridge) has 948 trees detected; Sector C (Valley Area) has 1,510 trees detected; Sector D (South Slope) has 822 trees detected. Across all currently surveyed sectors, a total of 4,525 trees have been cataloged with high precision."
+  },
+  {
+    "id": "canopy_coverage",
+    "title": "Green Canopy Cover Estimations",
+    "category": "metrics",
+    "tags": ["canopy", "green cover", "coverage", "percentage", "density", "vegetation"],
+    "content": "Green canopy cover is analyzed dynamically using channel-based color segmentation. Sector A maintains 82.4% green cover; Sector B registers 71.5% green cover; Sector C leads with 85.1% green cover; Sector D stands at 64.3% green cover. The overall average canopy coverage for the reserve is approximately 75.8%, with the remaining area classified as waterways, rocks, or bare soil patches."
+  },
+  {
+    "id": "species_distribution",
+    "title": "Tree Species Distribution",
+    "category": "biodiversity",
+    "tags": ["species", "types of trees", "distribution", "teak", "rosewood", "sandalwood", "bamboo", "eucalyptus"],
+    "content": "The forest reserve exhibits a diverse mix of native and commercial tree species: Teak (Tectona grandis) accounts for 35% of the total tree population; Rosewood (Dalbergia latifolia) makes up 18%; Sandalwood (Santalum album) represents 12%, situated primarily in the dry-deciduous zones of East Ridge; Bamboo groves (Bambusoideae) cover 20%, mostly in moist parts of Sector A; and Eucalyptus (Eucalyptus globulus) stands represent 15%, located in reclamation zones."
+  },
+  {
+    "id": "carbon_sequestration",
+    "title": "Biomass and Carbon Sequestration Estimates",
+    "category": "environment",
+    "tags": ["carbon", "sequestration", "co2", "biomass", "offset", "credits", "environment"],
+    "content": "The total estimated above-ground biomass of the GreenPulse reserve is approximately 2,450,000 metric tonnes. The average carbon sequestration rate is calculated at 4.8 tonnes of CO2 equivalent per hectare per year. Annually, the reserve offsets approximately 60,000 metric tonnes of atmospheric CO2. On an individual basis, each mature native tree in the forest stores an average of 0.85 tonnes of carbon dioxide equivalent."
+  },
+  {
+    "id": "forest_health_index",
+    "title": "Forest Health Index (FHI)",
+    "category": "health",
+    "tags": ["forest health", "fhi", "stressed", "healthy", "bare soil", "vegetative condition"],
+    "content": "The Forest Health Index (FHI) measures vegetative health based on HSL color space analysis and relative green-channel reflectivity. The reserve has an overall FHI of 7.6 out of 10, classified as 'Healthy'. The vegetation status breakdown is: 76.5% Healthy (vigorous canopy growth), 18.2% Stressed (drier canopy under seasonal water stress, common in summer), and 5.3% Bare Soil or Degraded land requiring restoration."
+  },
+  {
+    "id": "optimal_pathing",
+    "title": "Optimal Pathing & Navigation Tool",
+    "category": "tools",
+    "tags": ["pathing", "navigation", "route", "terrain", "friction cost", "patrol"],
+    "content": "The Optimal Pathing tool computes the safest and most efficient path between coordinates in the forest using Dijkstra and A* pathfinding. The algorithm considers terrain slope, water bodies, and canopy friction costs to draft paths. This tool is designed for forest ranger patrol routes, search-and-rescue operations, and identifying fire containment lines with minimal environmental impact."
+  },
+  {
+    "id": "weather_meteorological",
+    "title": "Weather and Climate Trends",
+    "category": "climate",
+    "tags": ["weather", "temperature", "rainfall", "monsoon", "climate", "humidity"],
+    "content": "GreenPulse experiences a tropical wet-and-dry climate with an average annual rainfall of 1,850 mm. The monsoon peak occurs in July with an average of 450 mm of precipitation. The annual mean temperature is 24.5°C, with April being the hottest month (average high of 32°C) and January being the coolest month (average low of 18°C). Average relative humidity stays around 72%."
+  },
+  {
+    "id": "air_quality",
+    "title": "Air Quality Index (AQI)",
+    "category": "environment",
+    "tags": ["aqi", "air quality", "pm2.5", "pollution", "ozone", "metrics"],
+    "content": "The forest reserve maintains pristine air quality. The core reserve area boasts an AQI ranging from 15 to 35 PM2.5, which falls under the 'Excellent/Good' category. Near the southern perimeter borders close to highways, the AQI is slightly elevated to a 'Moderate' range of 45 to 65 PM2.5 due to highway traffic emissions. The high density of trees serves as an effective natural particulate filter."
+  },
+  {
+    "id": "website_tools",
+    "title": "How to Use the Website Tools",
+    "category": "help",
+    "tags": ["help", "dashboard", "tools", "how to", "use", "upload"],
+    "content": "The GreenPulse dashboard offers multiple analytical panels: 1) Tree Count uses YOLOv8 model inference on uploaded aerial images; 2) Green Cover Estimator applies pixel-level color segmentation; 3) Tree Species Identifier maps species on a Google Map boundary; 4) Optimal Pathing designs routes on slope maps; 5) Forest Health analyzer calculates index using canopy image analysis; 6) Historical Data displays historical weather and temperature charts."
+  }
+]

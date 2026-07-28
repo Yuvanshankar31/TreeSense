@@ -1,7 +1,7 @@
 {
-  "name": "treesense-web",
+  "name": "greenpulse-web",
   "version": "1.0.0",
-  "description": "TreeSense Web Dashboard",
+  "description": "GreenPulse Web Dashboard",
   "scripts": {
     "start": "serve -p 3000"
   },
