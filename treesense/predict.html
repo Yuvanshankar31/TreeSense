@@ -59,7 +59,12 @@
 
         <!-- Main Display Iframe Frame -->
         <div class="iframe-container">
-            <iframe id="model-iframe" src="dist/index.html" title="Analytics Module View"></iframe>
+            <iframe id="iframe-detection" src="object_detection.html" title="Tree Count"></iframe>
+            <iframe id="iframe-segmentation" src="" title="Green Cover" style="display: none;"></iframe>
+            <iframe id="iframe-species" src="" title="Tree Species" style="display: none;"></iframe>
+            <iframe id="iframe-path" src="" title="Optimal Pathing" style="display: none;"></iframe>
+            <iframe id="iframe-health" src="" title="Forest Health" style="display: none;"></iframe>
+            <iframe id="iframe-historical" src="" title="Historical Data" style="display: none;"></iframe>
         </div>
     </main>
 
@@ -100,22 +105,39 @@
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             const buttons = [
-                { btn: document.getElementById('detection-button'), src: 'dist/index.html' },
-                { btn: document.getElementById('segmentation-button'), src: 'object_segmentation.html' },
-                { btn: document.getElementById('species-button'), src: 'tree_species.html' },
-                { btn: document.getElementById('path-button'), src: 'optimal_path.html' },
-                { btn: document.getElementById('health-button'), src: 'forest_health.html' },
-                { btn: document.getElementById('historical-button'), src: 'historical_data.html' }
+                { id: 'detection-button', iframeId: 'iframe-detection', src: 'object_detection.html' },
+                { id: 'segmentation-button', iframeId: 'iframe-segmentation', src: 'object_segmentation.html' },
+                { id: 'species-button', iframeId: 'iframe-species', src: 'tree_species.html' },
+                { id: 'path-button', iframeId: 'iframe-path', src: 'optimal_path.html' },
+                { id: 'health-button', iframeId: 'iframe-health', src: 'forest_health.html' },
+                { id: 'historical-button', iframeId: 'iframe-historical', src: 'historical_data.html' }
             ];
             
-            const modelIframe = document.getElementById('model-iframe');
-
             buttons.forEach(item => {
-                item.btn.addEventListener('click', () => {
-                    modelIframe.src = item.src;
-                    buttons.forEach(x => x.btn.classList.remove('active'));
-                    item.btn.classList.add('active');
-                });
+                const btn = document.getElementById(item.id);
+                if (btn) {
+                    btn.addEventListener('click', () => {
+                        buttons.forEach(x => {
+                            const b = document.getElementById(x.id);
+                            if (b) b.classList.remove('active');
+                        });
+                        btn.classList.add('active');
+                        
+                        buttons.forEach(x => {
+                            const iframe = document.getElementById(x.iframeId);
+                            if (iframe) {
+                                if (x.id === item.id) {
+                                    if (!iframe.src || iframe.src === window.location.href || iframe.getAttribute('src') === '') {
+                                        iframe.src = x.src;
+                                    }
+                                    iframe.style.display = 'block';
+                                } else {
+                                    iframe.style.display = 'none';
+                                }
+                            }
+                        });
+                    });
+                }
             });
         });
     </script>

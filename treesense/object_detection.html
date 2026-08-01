@@ -1,256 +1,411 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Tree Enumeration</title>
-    <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
-    <link rel="stylesheet" href="/src/assets/css/predict.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tree Enumeration (Tree Count)</title>
+  <!-- TensorFlow.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="/src/assets/css/styles.css">
+  <style>
+    body {
+      background: #ffffff;
+      padding: 24px;
+      font-family: 'Outfit', sans-serif;
+    }
+    .module-card {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 32px;
+      box-shadow: var(--shadow-sm);
+    }
+    .module-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .module-header h2 {
+      font-size: 26px;
+      color: var(--primary);
+    }
+    .module-header p {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+    .loading-status-bar {
+      margin: 15px auto;
+      padding: 12px 18px;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      text-align: center;
+      max-width: 600px;
+      transition: all 0.3s ease;
+      box-shadow: var(--shadow-sm);
+    }
+    .status-loading {
+      background-color: var(--accent-light);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+    }
+    .status-ready {
+      background-color: rgba(40, 167, 69, 0.08);
+      border: 1px solid rgb(40, 167, 69);
+      color: rgb(40, 167, 69);
+    }
+    .disabled-container {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+    /* File input overrides */
+    .upload-container input[type="file"] {
+      display: none;
+    }
+    .custom-file-upload {
+      display: inline-block;
+      padding: 10px 20px;
+      background: var(--secondary);
+      color: white;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-weight: 600;
+      margin-top: 10px;
+      transition: background 0.2s ease;
+    }
+    .custom-file-upload:hover {
+      background: var(--primary);
+    }
+    #file-name {
+      margin-top: 10px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Tree Enumeration</h1>
-    </header>
-    <main>
-        <input id="uploadInput" type="file"/>
-        <canvas></canvas>
-        <div id="objectCount"></div>
-        <script>
-            // ... Your existing JavaScript code ...
-       /**
-             * "Upload" button onClick handler: uploads selected image file
-             * to backend, receives array of detected objects
-             * and draws them on top of image
-             */
-             const input = document.getElementById("uploadInput");
-             input.addEventListener("change",async(event) => {
-                 const boxes = await detect_objects_on_image(event.target.files[0]);
-                 draw_image_and_boxes(event.target.files[0],boxes);
-             })
+
+<div class="module-card">
+  <div class="module-header">
+    <h2>Tree Enumeration (Tree Count)</h2>
+    <p>Upload a high-resolution satellite or drone canopy image to automatically locate and enumerate trees using a deep learning YOLOv8 model.</p>
+  </div>
+
+  <!-- Model Loading Status -->
+  <div id="model-status" class="loading-status-bar status-loading">
+    🔄 Preloading local deep learning model... (Please wait before uploading)
+  </div>
+
+  <!-- Custom Drag/Drop Upload Card styling -->
+  <div class="upload-container disabled-container" id="upload-card">
+    <span style="font-size: 40px; display: block; margin-bottom: 10px;">🌲</span>
+    <p style="font-weight: 600; color: var(--secondary); margin-bottom: 4px;">Upload Forest/Canopy Image</p>
+    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">PNG, JPG, or JPEG images</p>
+    <label for="uploadInput" class="custom-file-upload">
+      Browse Files
+    </label>
+    <input type="file" id="uploadInput" accept="image/*">
+    <div id="file-name">No file selected - Showing default test image</div>
+  </div>
+
+  <h3 style="font-size: 18px; color: var(--primary); margin: 28px 0 12px 0; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Processed Visualization</h3>
+  
+  <div class="image-comparison">
+    <div class="image-panel">
+      <h3>Original Image</h3>
+      <img id="uploaded-image" src="/images/treeicon.png" alt="Uploaded Image" style="min-height: 250px; object-fit: contain; width: 100%;">
+    </div>
+    <div class="image-panel">
+      <h3>Detected Trees Overlay</h3>
+      <div style="position: relative; width: 100%; display: inline-block;">
+        <canvas id="detection-canvas" style="width: 100%; height: auto; display: block; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border: 1px solid var(--border);"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="font-size: 18px; color: var(--primary); margin: 28px 0 12px 0; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Detection Metrics</h3>
+  
+  <div class="stats-grid">
+    <div class="metric-card">
+      <div class="metric-label">Detected Trees</div>
+      <div class="metric-value" id="objectCount">0</div>
+    </div>
+    <div class="metric-card" style="border-left-color: var(--secondary); background: rgba(27, 77, 62, 0.05);">
+      <div class="metric-label">Model Inference Time</div>
+      <div class="metric-value" id="inferenceTime">0 ms</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const MODEL_JSON_URL = "/web_model/model.json";
+  const confidenceThreshold = 0.20;
+  const yolo_classes = ['tree'];
+  
+  let model = null;
+  const input = document.getElementById("uploadInput");
+  const uploadedImg = document.getElementById("uploaded-image");
+
+  // Preload the model immediately on load
+  document.addEventListener("DOMContentLoaded", async () => {
+    const statusDiv = document.getElementById("model-status");
+    const uploadCard = document.getElementById("upload-card");
+    
+    try {
+      console.log("Setting TensorFlow.js backend to WebGL...");
+      await tf.setBackend('webgl');
+      await tf.ready();
       
+      console.log("Loading local TensorFlow.js model...");
+      model = await tf.loadGraphModel(MODEL_JSON_URL);
+      console.log("Model loaded successfully!");
+      
+      // Pre-warm the model to compile shaders
+      console.log("Pre-warming model...");
+      tf.tidy(() => {
+        const dummy = tf.zeros([1, 640, 640, 3]);
+        model.predict(dummy);
+      });
+      console.log("Model pre-warmed!");
 
-             const confidenceThreshold = 0.2; // You can adjust this threshold as needed
-
-            /**
-             * Function draws the image from provided file
-             * and bounding boxes of detected objects on
-             * top of the image
-             * @param file Uploaded file object
-             * @param boxes Array of bounding boxes in format [[x1,y1,x2,y2,object_type,probability],...]
-             */
-             
-  function draw_image_and_boxes(file, boxes) {
-  const img = new Image()
-  img.src = URL.createObjectURL(file);
-  img.onload = () => {
-    const canvas = document.querySelector("canvas");
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(img, 0, 0);
-    ctx.strokeStyle = "#00FF00";
-    ctx.lineWidth = 3;
-    ctx.font = "18px serif";
-
-    boxes.forEach(([x1, y1, x2, y2, label, prob]) => {
-      if (prob >= confidenceThreshold) {
-        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-        ctx.fillStyle = "#00ff00";
-        const width = ctx.measureText(`${label} (${(prob * 100).toFixed(2)}%)`).width;
-        const text = `${label} (${(prob * 100).toFixed(2)}%)`;
-        ctx.fillRect(x1, y1, width + 10, 25);
-        ctx.fillStyle = "#000000";
-        ctx.fillText(text, x1, y1 + 18);
+      statusDiv.className = "loading-status-bar status-ready";
+      statusDiv.innerHTML = "✅ Deep Learning Model Ready (GPU WebGL Accelerated)";
+      uploadCard.classList.remove("disabled-container");
+      
+      // Auto-run on the copied test image
+      await autoRunDefaultImage();
+    } catch (error) {
+      console.warn("Failed to load model on WebGL, trying CPU fallback...", error);
+      try {
+        await tf.setBackend('cpu');
+        await tf.ready();
+        
+        model = await tf.loadGraphModel(MODEL_JSON_URL);
+        console.log("Model loaded on CPU!");
+        statusDiv.className = "loading-status-bar status-ready";
+        statusDiv.innerHTML = "⚠️ Deep Learning Model Ready (CPU Fallback)";
+        uploadCard.classList.remove("disabled-container");
+        
+        await autoRunDefaultImage();
+      } catch (fallbackError) {
+        console.error("Critical error: Failed to load model on both WebGL and CPU.", fallbackError);
+        statusDiv.style.backgroundColor = "rgba(220, 53, 69, 0.1)";
+        statusDiv.style.border = "1px solid rgb(220, 53, 69)";
+        statusDiv.style.color = "rgb(220, 53, 69)";
+        statusDiv.innerHTML = "❌ Failed to load local model files. Please verify the web_model directory.";
       }
-    });
+    }
+  });
 
-    // Display the count of detected objects
-    document.getElementById("objectCount").textContent = `Detected Trees: ${boxes.length}`;
+  // Handle manual file selection
+  input.addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    document.getElementById("file-name").textContent = `Selected: ${file.name}`;
+    uploadedImg.src = URL.createObjectURL(file);
+    await processAndDraw(file);
+  });
+
+  // Run model on the default test image
+  async function autoRunDefaultImage() {
+    try {
+      const imgPath = "/images/image.png";
+      const response = await fetch(imgPath);
+      if (!response.ok) {
+        throw new Error(`HTTP error fetching ${imgPath}, status ${response.status}`);
+      }
+      const blob = await response.blob();
+      
+      uploadedImg.src = imgPath;
+      await processAndDraw(blob);
+    } catch (error) {
+      console.warn("Failed to auto-run default image:", error);
+    }
   }
-}
 
+  // Preprocess, predict, and render
+  async function processAndDraw(fileOrBlob) {
+    const startTime = performance.now();
+    try {
+      const [inputTensor, imgWidth, imgHeight] = await prepare_input(fileOrBlob);
+      const output = await run_model(inputTensor);
+      const boxes = process_output(output, imgWidth, imgHeight);
+      draw_image_and_boxes(fileOrBlob, boxes);
+      
+      const duration = Math.round(performance.now() - startTime);
+      document.getElementById("inferenceTime").textContent = `${duration} ms`;
+    } catch (err) {
+      console.error("Error during image processing:", err);
+      alert("Error processing the image. Please try another image.");
+    }
+  }
 
+  // Preprocess image to [1, 640, 640, 3] layout using tf.browser.fromPixels
+  async function prepare_input(fileOrBlob) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = URL.createObjectURL(fileOrBlob);
+      img.onload = () => {
+        const img_width = img.width;
+        const img_height = img.height;
+        
+        // Render image onto temporary 640x640 canvas
+        const canvas = document.createElement("canvas");
+        canvas.width = 640;
+        canvas.height = 640;
+        const context = canvas.getContext("2d");
+        context.drawImage(img, 0, 0, 640, 640);
+        
+        // Generate normalized WebGL tensor in HWC format
+        const tensor = tf.tidy(() => {
+          return tf.browser.fromPixels(canvas)
+            .toFloat()
+            .div(255.0)
+            .expandDims(0); // Shape: [1, 640, 640, 3]
+        });
+        
+        resolve([tensor, img_width, img_height]);
+      };
+      img.onerror = (err) => reject(err);
+    });
+  }
 
-            /**
-             * Function receives an image, passes it through YOLOv8 neural network
-             * and returns an array of detected objects and their bounding boxes
-             * @param buf Input image body
-             * @returns Array of bounding boxes in format [[x1,y1,x2,y2,object_type,probability],..]
-             */
-            async function detect_objects_on_image(buf) {
-                const [input,img_width,img_height] = await prepare_input(buf);
-                const output = await run_model(input);
-                return process_output(output,img_width,img_height);
-            }
+  // Execute predictions and free tensor memories
+  async function run_model(inputTensor) {
+    if (!model) throw new Error("TensorFlow.js model not ready");
+    
+    const outputTensor = model.predict(inputTensor);
+    const outputData = await outputTensor.data();
+    
+    // Dispose input and output tensors to prevent GPU memory leaks
+    tf.dispose([inputTensor, outputTensor]);
+    
+    return outputData;
+  }
+
+  // Parse YOLOv8 output, apply confidence threshold and NMS
+  function process_output(output, img_width, img_height) {
+    let boxes = [];
+    const num_classes = Math.round(output.length / 8400) - 4;
+
+    for (let index = 0; index < 8400; index++) {
+      let class_id = 0;
+      let prob = 0;
       
-            /**
-             * Function used to convert input image to tensor,
-             * required as an input to YOLOv8 object detection
-             * network.
-             * @param buf Content of uploaded file
-             * @returns Array of pixels
-             */
-            async function prepare_input(buf) {
-                return new Promise(resolve => {
-                    const img = new Image();
-                    img.src = URL.createObjectURL(buf);
-                    img.onload = () => {
-                        const [img_width,img_height] = [img.width, img.height]
-                        const canvas = document.createElement("canvas");
-                        canvas.width = 640;
-                        canvas.height = 640;
-                        const context = canvas.getContext("2d");
-                        context.drawImage(img,0,0,640,640);
-                        const imgData = context.getImageData(0,0,640,640);
-                        const pixels = imgData.data;
+      if (num_classes === 1) {
+        prob = output[8400 * 4 + index];
+      } else {
+        for (let col = 0; col < num_classes; col++) {
+          const p = output[8400 * (col + 4) + index];
+          if (p > prob) {
+            prob = p;
+            class_id = col;
+          }
+        }
+      }
+
+      if (prob < confidenceThreshold) {
+        continue;
+      }
+
+      const label = yolo_classes[class_id] || `class_${class_id}`;
+      const xc = output[index];
+      const yc = output[8400 + index];
+      const w = output[2 * 8400 + index];
+      const h = output[3 * 8400 + index];
+
+      // Convert center coordinates to bounding box coordinates
+      const x1 = (xc - w / 2) / 640 * img_width;
+      const y1 = (yc - h / 2) / 640 * img_height;
+      const x2 = (xc + w / 2) / 640 * img_width;
+      const y2 = (yc + h / 2) / 640 * img_height;
+
+      boxes.push([x1, y1, x2, y2, label, prob]);
+    }
+
+    // Sort by confidence descending
+    boxes.sort((a, b) => b[5] - a[5]);
+
+    // Apply Non-Maximum Suppression (NMS)
+    const result = [];
+    while (boxes.length > 0) {
+      const best = boxes[0];
+      result.push(best);
+      boxes = boxes.filter(box => iou(best, box) < 0.45);
+    }
+    return result;
+  }
+
+  // IoU calculations
+  function iou(box1, box2) {
+    return intersection(box1, box2) / union(box1, box2);
+  }
+
+  function union(box1, box2) {
+    const [b1_x1, b1_y1, b1_x2, b1_y2] = box1;
+    const [b2_x1, b2_y1, b2_x2, b2_y2] = box2;
+    const area1 = (b1_x2 - b1_x1) * (b1_y2 - b1_y1);
+    const area2 = (b2_x2 - b2_x1) * (b2_y2 - b2_y1);
+    return area1 + area2 - intersection(box1, box2);
+  }
+
+  function intersection(box1, box2) {
+    const [b1_x1, b1_y1, b1_x2, b1_y2] = box1;
+    const [b2_x1, b2_y1, b2_x2, b2_y2] = box2;
+    const x1 = Math.max(b1_x1, b2_x1);
+    const y1 = Math.max(b1_y1, b2_y1);
+    const x2 = Math.min(b1_x2, b2_x2);
+    const y2 = Math.min(b1_y2, b2_y2);
+    if (x2 <= x1 || y2 <= y1) return 0;
+    return (x2 - x1) * (y2 - y1);
+  }
+
+  // Draw overlay canvas
+  function draw_image_and_boxes(fileOrBlob, boxes) {
+    const img = new Image();
+    img.src = URL.createObjectURL(fileOrBlob);
+    img.onload = () => {
+      const canvas = document.getElementById("detection-canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
       
-                        const red = [], green = [], blue = [];
-                        for (let index=0; index<pixels.length; index+=4) {
-                            red.push(pixels[index]/255.0);
-                            green.push(pixels[index+1]/255.0);
-                            blue.push(pixels[index+2]/255.0);
-                        }
-                        const input = [...red, ...green, ...blue];
-                        resolve([input, img_width, img_height])
-                    }
-                })
-            }
+      // Scale lines and fonts dynamically based on image resolution
+      const strokeSize = Math.max(2, Math.round(img.width / 400));
+      const fontSize = Math.max(12, Math.round(img.width / 60));
       
-            /**
-             * Function used to pass provided input tensor to YOLOv8 neural network and return result
-             * @param input Input pixels array
-             * @returns Raw output of neural network as a flat array of numbers
-             */
-            async function run_model(input) {
-                const model = await ort.InferenceSession.create("https://ml-cdn.vipulchaturvedi.com/100going1000.onnx");
-                input = new ort.Tensor(Float32Array.from(input),[1, 3, 640, 640]);
-                const outputs = await model.run({images:input});
-                return outputs["output0"].data;
-            }
-      
-            /*
-             * Function used to convert RAW output from YOLOv8 to an array of detected objects.
-             * Each object contain the bounding box of this object, the type of object and the probability
-             * @param output Raw output of YOLOv8 network
-             * @param img_width Width of original image
-             * @param img_height Height of original image
-             * @returns Array of detected objects in a format [[x1,y1,x2,y2,object_type,probability],..]
-             */
-            function process_output(output, img_width, img_height) {
-                let boxes = [];
-                for (let index=0;index<8400;index++) {
-                    const [class_id,prob] = [...Array(80).keys()]
-                        .map(col => [col, output[8400*(col+4)+index]])
-                        .reduce((accum, item) => item[1]>accum[1] ? item : accum,[0,0]);
-                    if (prob < 0.5) {
-                        continue;
-                    }
-                    const label = yolo_classes[class_id];
-                    const xc = output[index];
-                    const yc = output[8400+index];
-                    const w = output[2*8400+index];
-                    const h = output[3*8400+index];
-                    const x1 = (xc-w/2)/640*img_width;
-                    const y1 = (yc-h/2)/640*img_height;
-                    const x2 = (xc+w/2)/640*img_width;
-                    const y2 = (yc+h/2)/640*img_height;
-                    boxes.push([x1,y1,x2,y2,label,prob]);
-                }
-      
-                boxes = boxes.sort((box1,box2) => box2[5]-box1[5])
-                const result = [];
-                while (boxes.length>0) {
-                    result.push(boxes[0]);
-                    boxes = boxes.filter(box => iou(boxes[0],box)<0.7);
-                }
-                return result;
-            }
-      
-            /**
-             * Function calculates "Intersection-over-union" coefficient for specified two boxes
-             * https://pyimagesearch.com/2016/11/07/intersection-over-union-iou-for-object-detection/.
-             * @param box1 First box in format: [x1,y1,x2,y2,object_class,probability]
-             * @param box2 Second box in format: [x1,y1,x2,y2,object_class,probability]
-             * @returns Intersection over union ratio as a float number
-             */
-            function iou(box1,box2) {
-                return intersection(box1,box2)/union(box1,box2);
-            }
-      
-            /**
-             * Function calculates union area of two boxes.
-             *     :param box1: First box in format [x1,y1,x2,y2,object_class,probability]
-             *     :param box2: Second box in format [x1,y1,x2,y2,object_class,probability]
-             *     :return: Area of the boxes union as a float number
-             * @param box1 First box in format [x1,y1,x2,y2,object_class,probability]
-             * @param box2 Second box in format [x1,y1,x2,y2,object_class,probability]
-             * @returns Area of the boxes union as a float number
-             */
-            function union(box1,box2) {
-                const [box1_x1,box1_y1,box1_x2,box1_y2] = box1;
-                const [box2_x1,box2_y1,box2_x2,box2_y2] = box2;
-                const box1_area = (box1_x2-box1_x1)*(box1_y2-box1_y1)
-                const box2_area = (box2_x2-box2_x1)*(box2_y2-box2_y1)
-                return box1_area + box2_area - intersection(box1,box2)
-            }
-      
-            /**
-             * Function calculates intersection area of two boxes
-             * @param box1 First box in format [x1,y1,x2,y2,object_class,probability]
-             * @param box2 Second box in format [x1,y1,x2,y2,object_class,probability]
-             * @returns Area of intersection of the boxes as a float number
-             */
-            function intersection(box1,box2) {
-                const [box1_x1,box1_y1,box1_x2,box1_y2] = box1;
-                const [box2_x1,box2_y1,box2_x2,box2_y2] = box2;
-                const x1 = Math.max(box1_x1,box2_x1);
-                const y1 = Math.max(box1_y1,box2_y1);
-                const x2 = Math.min(box1_x2,box2_x2);
-                const y2 = Math.min(box1_y2,box2_y2);
-                return (x2-x1)*(y2-y1)
-            }
-      
-            /**
-             * Array of YOLOv8 class labels
-             */
-            const yolo_classes = [
-                'tree'
-            ];
-            /**
-             * Function draws the image from provided file
-             * and bounding boxes of detected objects on
-             * top of the image
-             * @param file Uploaded file object
-             * @param boxes Array of bounding boxes in format [[x1,y1,x2,y2,object_type,probability],...]
-             */
-            function draw_image_and_boxes(file, boxes) {
-                const img = new Image()
-                img.src = URL.createObjectURL(file);
-                img.onload = () => {
-                    const canvas = document.querySelector("canvas");
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    const ctx = canvas.getContext("2d");
-                    ctx.drawImage(img,0,0);
-                    ctx.strokeStyle = "#00FF00";
-                    ctx.lineWidth = 3;
-                    ctx.font = "18px serif";
-                    boxes.forEach(([x1,y1,x2,y2,label]) => {
-                        ctx.strokeRect(x1,y1,x2-x1,y2-y1);
-                        ctx.fillStyle = "#00ff00";
-                        const width = ctx.measureText(label).width;
-                        ctx.fillRect(x1,y1,width+10,25);
-                        ctx.fillStyle = "#000000";
-                        ctx.fillText(label, x1, y1+18);
-                    });
-      
-                    // Display the count of detected objects
-                    document.getElementById("objectCount").textContent = `Detected Trees: ${boxes.length}`;
-                }
-            }
-      
-            // ... Rest of your code ...
-      
-          </script>
-    </main>
+      ctx.strokeStyle = "#28a745";
+      ctx.lineWidth = strokeSize;
+      ctx.font = `bold ${fontSize}px 'Outfit', sans-serif`;
+      ctx.textBaseline = "top";
+
+      boxes.forEach(([x1, y1, x2, y2, label, prob]) => {
+        // Draw bounding box rectangle
+        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        
+        // Draw label background tag
+        ctx.fillStyle = "rgba(40, 167, 69, 0.85)";
+        const text = `${label} (${(prob * 100).toFixed(0)}%)`;
+        const textMetrics = ctx.measureText(text);
+        const textWidth = textMetrics.width;
+        const textHeight = fontSize;
+        
+        ctx.fillRect(x1, y1, textWidth + 10, textHeight + 6);
+        
+        // Draw text label
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(text, x1 + 5, y1 + 3);
+      });
+
+      // Update tree count metric in UI
+      document.getElementById("objectCount").textContent = boxes.length;
+    };
+  }
+</script>
+
 </body>
 </html>
