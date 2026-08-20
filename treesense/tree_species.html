@@ -3,8 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Map GreenPulse - Species Analytics</title>
+    <title>GreenPulse - Tree Species Analytics</title>
+    
+    <!-- Leaflet mapping CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    
     <link rel="stylesheet" href="/src/assets/css/styles.css">
+    
     <style>
         body {
             background-color: #ffffff;
@@ -34,6 +40,7 @@
             border: 1px solid var(--border);
             box-shadow: var(--shadow-sm);
             margin-bottom: 30px;
+            z-index: 1; /* Keep leaflet controls behind headers/drawers */
         }
 
         .output-section {
@@ -48,16 +55,120 @@
             color: var(--primary);
             margin-bottom: 20px;
         }
+
+        /* Custom Styles for Leaflet tooltips & popups to match GreenPulse theme */
+        .leaflet-popup-content-wrapper {
+            border-radius: var(--radius-sm);
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+        }
+        .leaflet-popup-tip {
+            box-shadow: var(--shadow-sm);
+        }
+        .leaflet-tooltip {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 11px;
+            font-weight: 700;
+            background-color: var(--primary);
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Species Distribution Grid */
+        .species-section {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            text-align: left;
+        }
+        .species-section h2 {
+            font-size: 20px;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+        .species-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .species-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: var(--transition-fast);
+            position: relative;
+            overflow: hidden;
+        }
+        .species-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--accent);
+        }
+        .species-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .species-name {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .species-sci {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-style: italic;
+            margin-top: 2px;
+        }
+        .species-count-badge {
+            background: var(--accent-light);
+            color: var(--secondary);
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .progress-bar-container {
+            height: 8px;
+            background: #e2e9e6;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+            margin-top: 4px;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .species-desc {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
     </style>
 </head>
 <body>
     <div class="module-card">
         <div class="module-header">
             <h2>Draw Boundary for Analysis</h2>
-            <p>Use the drawing tools at the top of the map to select a rectangular boundary for canopy assessment.</p>
+            <p>Use the rectangle tool on the left side of the map to select or modify a boundary for canopy assessment.</p>
         </div>
 
-        <!-- Google Map Container -->
+        <!-- Leaflet Map Container -->
         <div id="map"></div>
 
         <!-- Output Analysis Section -->
@@ -82,6 +193,10 @@
                     <div class="metric-label">Green Cover Area</div>
                     <div class="metric-value" id="greenPercent">0.00%</div>
                 </div>
+                <div class="metric-card" style="border-left-color: var(--accent); background: rgba(46, 196, 182, 0.05);">
+                    <div class="metric-label">Estimated Total Trees</div>
+                    <div class="metric-value" id="estimatedTreesCount">0</div>
+                </div>
                 <div class="metric-card" style="border-left-color: var(--secondary); background: rgba(27, 77, 62, 0.05);">
                     <div class="metric-label">Target Location Info</div>
                     <div id="locationInfo" style="margin-top: 8px; font-size: 13px; color: var(--text-muted); line-height: 1.4;">
@@ -89,104 +204,191 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Species Distribution Section -->
+            <div class="species-section">
+                <h2>Identified Tree Species Distribution</h2>
+                <div class="species-grid" id="speciesGrid">
+                    <!-- Dynamic species cards injected here -->
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- Leaflet and Leaflet Draw scripts from CDN -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+
+    <!-- Map & Analysis Logic -->
     <script>
-        function initMap() {
-            const map = new google.maps.Map(document.getElementById('map'), {
-                center: { lat: 23.2599, lng: 77.4126 },
-                zoom: 12,
-                styles: [
-                    {
-                        "featureType": "poi.park",
-                        "elementType": "geometry.fill",
-                        "stylers": [{ "color": "#d8f3dc" }]
+        // Species configuration from project knowledge base
+        const speciesConfig = [
+            {
+                name: "Teak",
+                sciName: "Tectona grandis",
+                ratio: 0.35,
+                emoji: "🪵",
+                color: "#8E5A35",
+                gradient: "linear-gradient(90deg, #8E5A35, #A0522D)",
+                desc: "High-quality hardwood, prized for its durability and water resistance. Found in dry areas."
+            },
+            {
+                name: "Bamboo",
+                sciName: "Bambusoideae",
+                ratio: 0.20,
+                emoji: "🎋",
+                color: "#2a9d8f",
+                gradient: "linear-gradient(90deg, #2a9d8f, #52b788)",
+                desc: "Fast-growing evergreen, providing vital soil stabilization and carbon absorption."
+            },
+            {
+                name: "Rosewood",
+                sciName: "Dalbergia latifolia",
+                ratio: 0.18,
+                emoji: "🌳",
+                color: "#5C2C16",
+                gradient: "linear-gradient(90deg, #5C2C16, #8B4513)",
+                desc: "Premium dense timber with rich reddish hues, native to tropical dry-deciduous zones."
+            },
+            {
+                name: "Eucalyptus",
+                sciName: "Eucalyptus globulus",
+                ratio: 0.15,
+                emoji: "🍃",
+                color: "#83c5be",
+                gradient: "linear-gradient(90deg, #83c5be, #a8dadc)",
+                desc: "Fast-growing canopy trees used primarily in soil reclamation and wood pulp production."
+            },
+            {
+                name: "Sandalwood",
+                sciName: "Santalum album",
+                ratio: 0.12,
+                emoji: "🌿",
+                color: "#DEB887",
+                gradient: "linear-gradient(90deg, #DEB887, #e9c46a)",
+                desc: "Highly fragrant wood famous for essential oils, scattered across dry rocky slopes."
+            }
+        ];
+
+        // Retrieve saved coordinates from index reserve selector or default to Bhopal
+        const mapLat = parseFloat(localStorage.getItem('selectedLatitude')) || 23.2599;
+        const mapLon = parseFloat(localStorage.getItem('selectedLongitude')) || 77.4126;
+
+        // Initialize Leaflet Map
+        const map = L.map('map', {
+            center: [mapLat, mapLon],
+            zoom: 15,
+            zoomControl: true
+        });
+
+        // Map Tile Layers
+        const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+
+        const labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Labels &copy; Esri'
+        });
+
+        // Combine satellite image and transparent labels to make a Satellite Hybrid view
+        const satelliteHybrid = L.layerGroup([satellite, labels]);
+
+        const streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        });
+
+        // Load Satellite Hybrid by default so users can see location names on top of satellite imagery
+        satelliteHybrid.addTo(map);
+
+        const baseMaps = {
+            "Satellite Hybrid": satelliteHybrid,
+            "Pure Satellite": satellite,
+            "Street View": streets
+        };
+        L.control.layers(baseMaps, null, { position: 'topright' }).addTo(map);
+
+        // Feature Group to store drawn boundary shapes
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        // Feature Group to store generated tree markers
+        const markerGroup = L.featureGroup().addTo(map);
+
+        // Draw initial default boundary centered on selection
+        const sizeOffset = 0.003; // Creates ~600x600m area
+        const defaultBounds = L.latLngBounds(
+            [mapLat - sizeOffset, mapLon - sizeOffset],
+            [mapLat + sizeOffset, mapLon + sizeOffset]
+        );
+
+        const defaultRect = L.rectangle(defaultBounds, {
+            color: '#2ec4b6',
+            fillColor: '#2ec4b6',
+            fillOpacity: 0.15,
+            weight: 2
+        });
+        drawnItems.addLayer(defaultRect);
+
+        // Initialize Drawing Control Tool
+        const drawControl = new L.Control.Draw({
+            draw: {
+                polyline: false,
+                polygon: false,
+                circle: false,
+                marker: false,
+                circlemarker: false,
+                rectangle: {
+                    shapeOptions: {
+                        color: '#2ec4b6',
+                        fillColor: '#2ec4b6',
+                        fillOpacity: 0.15,
+                        weight: 2
                     }
-                ]
-            });
-
-            let currentRectangle = null;
-
-            // Load coordinates from localStorage (falls back to Bhopal default)
-            const mapLat = parseFloat(localStorage.getItem('selectedLatitude')) || 23.2599;
-            const mapLon = parseFloat(localStorage.getItem('selectedLongitude')) || 77.4126;
-            
-            // Re-center map to the current selected location
-            map.setCenter({ lat: mapLat, lng: mapLon });
-
-            // Create default boundary box automatically
-            const defaultBounds = new google.maps.LatLngBounds(
-                new google.maps.LatLng(mapLat - 0.008, mapLon - 0.008),
-                new google.maps.LatLng(mapLat + 0.008, mapLon + 0.008)
-            );
-
-            const defaultRect = new google.maps.Rectangle({
-                bounds: defaultBounds,
-                fillColor: '#2ec4b6',
-                fillOpacity: 0.2,
-                strokeWeight: 2,
-                strokeColor: '#2ec4b6',
-                clickable: true,
-                editable: true,
-                map: map
-            });
-
-            currentRectangle = defaultRect;
-            runAnalysis(defaultBounds);
-
-            const drawingManager = new google.maps.drawing.DrawingManager({
-                drawingMode: google.maps.drawing.OverlayType.RECTANGLE,
-                drawingControl: true,
-                drawingControlOptions: {
-                    position: google.maps.ControlPosition.TOP_CENTER,
-                    drawingModes: ['rectangle'],
-                },
-                rectangleOptions: {
-                    fillColor: '#2ec4b6',
-                    fillOpacity: 0.2,
-                    strokeWeight: 2,
-                    strokeColor: '#2ec4b6',
-                    clickable: true,
-                    editable: true,
-                    zIndex: 1
                 }
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: false
+            }
+        });
+        map.addControl(drawControl);
+
+        // Trigger analysis for initial rectangle
+        runAnalysis(defaultBounds);
+
+        // Listen for new drawing events
+        map.on(L.Draw.Event.CREATED, function(e) {
+            const layer = e.layer;
+            drawnItems.clearLayers();
+            drawnItems.addLayer(layer);
+            runAnalysis(layer.getBounds());
+        });
+
+        // Listen for edited drawing events
+        map.on(L.Draw.Event.EDITED, function(e) {
+            const layers = e.layers;
+            layers.eachLayer(function(layer) {
+                runAnalysis(layer.getBounds());
             });
+        });
 
-            drawingManager.setMap(map);
+        // Execute Image Processing and Canopy/Species Distribution Analysis
+        function runAnalysis(bounds) {
+            console.log('Running canopy and species analysis on bounds:', bounds);
 
-            google.maps.event.addListener(drawingManager, 'overlaycomplete', function(event) {
-                if (currentRectangle) {
-                    currentRectangle.setMap(null);
-                }
-                currentRectangle = event.overlay;
-                runAnalysis(currentRectangle.getBounds());
-            });
+            const center = bounds.getCenter();
+            const ne = bounds.getNorthEast();
+            const sw = bounds.getSouthWest();
 
-            function runAnalysis(bounds) {
-                console.log('Running analysis on bounds:', bounds);
+            document.getElementById('locationInfo').innerHTML = `
+                <p style="margin: 2px 0;"><strong>Center Lat:</strong> ${center.lat.toFixed(5)}</p>
+                <p style="margin: 2px 0;"><strong>Center Lng:</strong> ${center.lng.toFixed(5)}</p>
+                <p style="margin: 2px 0; color: var(--accent); font-weight: bold;">Loading Satellite Imagery...</p>
+            `;
 
-                const proxyUrl = 'https://gmap-sih-img-proxy.vipulchaturvedi.workers.dev/';
-                const imgUrl = `${proxyUrl}?center=${bounds.getCenter().lat()},${bounds.getCenter().lng()}&zoom=15&size=640x640&path=fillcolor:0x00000000|color:0x00000000|${bounds.getNorthEast().toUrlValue()}|${bounds.getNorthEast().lat()},${bounds.getSouthWest().lng()}|${bounds.getSouthWest().toUrlValue()}|${bounds.getSouthWest().lat()},${bounds.getNorthEast().lng()}&key=AIzaSyCpzV2uci8gLyp8si2idL0Gy1PLUe_J8bU`;
-
+            stitchSatelliteTiles(sw, ne, function(croppedCanvas) {
                 const croppedImage = document.getElementById('croppedImage');
                 
-                // Add robust fallback for 403 / billing error cases
-                croppedImage.onerror = () => {
-                    croppedImage.onerror = null; // Prevent loop
-                    console.warn("Failed to load static map crop from proxy (403/Billing Error). Falling back to local forest sample.");
-                    croppedImage.src = '/images/background.jpg';
-                };
-                
-                croppedImage.src = imgUrl;
-
-                document.getElementById('locationInfo').innerHTML = `
-                    <p style="margin: 2px 0;"><strong>Center Lat:</strong> ${bounds.getCenter().lat().toFixed(5)}</p>
-                    <p style="margin: 2px 0;"><strong>Center Lng:</strong> ${bounds.getCenter().lng().toFixed(5)}</p>
-                    <p style="margin: 2px 0;"><strong>Zoom Level:</strong> 15</p>
-                `;
-
                 croppedImage.onload = () => {
                     const canvas = document.getElementById('processedCanvas');
                     const ctx = canvas.getContext('2d');
@@ -225,11 +427,219 @@
                     const greenPercent = (greenPixels / totalPixels) * 100;
 
                     document.getElementById('greenPercent').innerText = `${greenPercent.toFixed(2)}%`;
+
+                    // Calculate geographical area (approximate distance in meters)
+                    const latDist = Math.abs(ne.lat - sw.lat) * 111320;
+                    const lngDist = Math.abs(ne.lng - sw.lng) * 40075000 * Math.cos((ne.lat + sw.lat) * Math.PI / 360) / 360;
+                    const areaSqMeters = latDist * lngDist;
+
+                    // Estimate tree counts (assuming average tree canopy of ~25 sq meters per tree)
+                    const estimatedTrees = Math.round((greenPercent / 100) * areaSqMeters * 0.04);
+                    document.getElementById('estimatedTreesCount').innerText = estimatedTrees.toLocaleString();
+
+                    // Scatter interactive markers representing tree counts on Leaflet map
+                    generateTreeMarkers(bounds, greenPercent, estimatedTrees);
+
+                    // Update the Species Distribution panels
+                    updateSpeciesDistribution(estimatedTrees);
+
+                    document.getElementById('locationInfo').innerHTML = `
+                        <p style="margin: 2px 0;"><strong>Center Lat:</strong> ${center.lat.toFixed(5)}</p>
+                        <p style="margin: 2px 0;"><strong>Center Lng:</strong> ${center.lng.toFixed(5)}</p>
+                        <p style="margin: 2px 0;"><strong>Zoom Level:</strong> 15</p>
+                    `;
                 };
+
+                croppedImage.src = croppedCanvas.toDataURL();
+            });
+        }
+
+        // Helper to stitch satellite tiles client-side within the bounding box
+        function stitchSatelliteTiles(sw, ne, callback) {
+            const zoom = 16; // Use zoom level 16 for high-res details
+
+            function lon2tile(lon, zoom) {
+                return Math.floor((lon + 180) / 360 * Math.pow(2, zoom));
+            }
+            function lat2tile(lat, zoom) {
+                return Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom));
+            }
+            function getTileFraction(lat, lon, zoom) {
+                const x = (lon + 180) / 360 * Math.pow(2, zoom);
+                const y = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, zoom);
+                return { x, y };
+            }
+
+            const xMin = lon2tile(sw.lng, zoom);
+            const xMax = lon2tile(ne.lng, zoom);
+            const yMin = lat2tile(ne.lat, zoom);
+            const yMax = lat2tile(sw.lat, zoom);
+
+            const cols = xMax - xMin + 1;
+            const rows = yMax - yMin + 1;
+
+            // Create temporary canvas to assemble tiles
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = cols * 256;
+            tempCanvas.height = rows * 256;
+            const tempCtx = tempCanvas.getContext('2d');
+
+            let loadedCount = 0;
+            const totalTiles = cols * rows;
+
+            for (let c = 0; c < cols; c++) {
+                for (let r = 0; r < rows; r++) {
+                    const tileX = xMin + c;
+                    const tileY = yMin + r;
+
+                    const img = new Image();
+                    img.crossOrigin = "Anonymous"; // Prevent tainted canvas errors
+                    img.src = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${tileY}/${tileX}`;
+
+                    img.onload = () => {
+                        tempCtx.drawImage(img, c * 256, r * 256);
+                        loadedCount++;
+                        if (loadedCount === totalTiles) {
+                            cropAndReturn();
+                        }
+                    };
+
+                    img.onerror = () => {
+                        // Fallback background color if tile fails
+                        tempCtx.fillStyle = '#1b4d3e';
+                        tempCtx.fillRect(c * 256, r * 256, 256, 256);
+                        loadedCount++;
+                        if (loadedCount === totalTiles) {
+                            cropAndReturn();
+                        }
+                    };
+                }
+            }
+
+            function cropAndReturn() {
+                const swFraction = getTileFraction(sw.lat, sw.lng, zoom);
+                const neFraction = getTileFraction(ne.lat, ne.lng, zoom);
+
+                const pixelXStart = (swFraction.x - xMin) * 256;
+                const pixelXEnd = (neFraction.x - xMin) * 256;
+                const pixelYStart = (neFraction.y - yMin) * 256;
+                const pixelYEnd = (swFraction.y - yMin) * 256;
+
+                const cropX = Math.min(pixelXStart, pixelXEnd);
+                const cropY = Math.min(pixelYStart, pixelYEnd);
+                const cropW = Math.abs(pixelXEnd - pixelXStart);
+                const cropH = Math.abs(pixelYEnd - pixelYStart);
+
+                const finalCanvas = document.createElement('canvas');
+                finalCanvas.width = 640;
+                finalCanvas.height = 640;
+                const finalCtx = finalCanvas.getContext('2d');
+
+                if (cropW > 0 && cropH > 0) {
+                    finalCtx.drawImage(tempCanvas, cropX, cropY, cropW, cropH, 0, 0, 640, 640);
+                } else {
+                    finalCtx.fillStyle = '#1b4d3e';
+                    finalCtx.fillRect(0, 0, 640, 640);
+                }
+
+                callback(finalCanvas);
             }
         }
-    </script>
 
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCpzV2uci8gLyp8si2idL0Gy1PLUe_J8bU&libraries=drawing&callback=initMap"></script>
+        // Generate coordinates and scatter colored tree markers inside the boundary box
+        function generateTreeMarkers(bounds, greenPercent, estimatedTrees) {
+            markerGroup.clearLayers();
+
+            // Cap the visual markers to 100 to prevent lagging and browser bloat
+            const visualMarkersCount = Math.min(estimatedTrees, 100);
+            if (visualMarkersCount === 0) return;
+
+            const sw = bounds.getSouthWest();
+            const ne = bounds.getNorthEast();
+
+            for (let i = 0; i < visualMarkersCount; i++) {
+                // Determine species probabilistically based on predefined ratios
+                const randVal = Math.random();
+                let selectedSpecies = speciesConfig[speciesConfig.length - 1];
+                let cumulativeRatio = 0;
+                for (const spec of speciesConfig) {
+                    cumulativeRatio += spec.ratio;
+                    if (randVal <= cumulativeRatio) {
+                        selectedSpecies = spec;
+                        break;
+                    }
+                }
+
+                // Place marker randomly within bounds
+                const markerLat = sw.lat + Math.random() * (ne.lat - sw.lat);
+                const markerLon = sw.lng + Math.random() * (ne.lng - sw.lng);
+
+                // Generate random forestry metrics for realistic interactive tooltips
+                const treeHeight = (10 + Math.random() * 15).toFixed(1); // 10m - 25m
+                const canopyDiameter = (4 + Math.random() * 6).toFixed(1); // 4m - 10m
+                const isHealthy = Math.random() > 0.15; // 85% healthy
+
+                const marker = L.circleMarker([markerLat, markerLon], {
+                    radius: 5,
+                    fillColor: selectedSpecies.color,
+                    color: "#ffffff",
+                    weight: 1,
+                    opacity: 0.9,
+                    fillOpacity: 0.8
+                });
+
+                // Detailed popup layout
+                const popupContent = `
+                    <div style="font-family: 'Plus Jakarta Sans', sans-serif; font-size:12px; color: var(--text-main); line-height: 1.4;">
+                        <h4 style="margin: 0 0 6px 0; color: var(--primary); display: flex; align-items: center; gap: 6px; font-weight: 700;">
+                            <span>${selectedSpecies.emoji}</span> <span>${selectedSpecies.name}</span>
+                        </h4>
+                        <p style="margin: 2px 0; font-style: italic; font-size: 11px; color: var(--text-muted);">${selectedSpecies.sciName}</p>
+                        <hr style="margin: 6px 0; border: none; border-top: 1px solid var(--border);" />
+                        <p style="margin: 2px 0;"><strong>Estimated Height:</strong> ${treeHeight} m</p>
+                        <p style="margin: 2px 0;"><strong>Canopy Diameter:</strong> ${canopyDiameter} m</p>
+                        <p style="margin: 2px 0;"><strong>Condition:</strong> <span style="color: ${isHealthy ? 'var(--success)' : '#e07a5f'}; font-weight:700;">${isHealthy ? 'Healthy' : 'Stressed'}</span></p>
+                    </div>
+                `;
+
+                marker.bindPopup(popupContent);
+                marker.bindTooltip(`${selectedSpecies.emoji} ${selectedSpecies.name}`, { direction: 'top', offset: [0, -5] });
+
+                markerGroup.addLayer(marker);
+            }
+        }
+
+        // Render species count and percentage progress bars on dashboard
+        function updateSpeciesDistribution(totalTrees) {
+            const speciesGrid = document.getElementById('speciesGrid');
+            speciesGrid.innerHTML = '';
+
+            speciesConfig.forEach(spec => {
+                const count = Math.round(totalTrees * spec.ratio);
+                const percentVal = (spec.ratio * 100).toFixed(0);
+
+                const card = document.createElement('div');
+                card.className = 'species-card';
+                card.innerHTML = `
+                    <div class="species-info">
+                        <div>
+                            <div class="species-name">${spec.emoji} ${spec.name}</div>
+                            <div class="species-sci">${spec.sciName}</div>
+                        </div>
+                        <div class="species-count-badge">${count.toLocaleString()} trees</div>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" style="background: ${spec.gradient}; width: ${percentVal}%"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-muted); font-weight: 600;">
+                        <span>Distribution Ratio</span>
+                        <span>${percentVal}%</span>
+                    </div>
+                    <p class="species-desc">${spec.desc}</p>
+                `;
+                speciesGrid.appendChild(card);
+            });
+        }
+    </script>
 </body>
 </html>
