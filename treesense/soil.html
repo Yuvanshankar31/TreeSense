@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Soil Moisture Levels</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js" integrity="sha384-7NrRHqlWUj2hJl3a/dZj/a1GxuQc56mJ3aYsEnydBYrY1jR+RSt6SBvK3sHfj+mJ" crossorigin="anonymous"></script>
+    <script src="/src/assets/js/coordinates.js"></script>
     <link rel="stylesheet" href="/src/assets/css/styles.css">
     <style>
         body {
@@ -24,8 +25,7 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", async function() {
-            const lat = localStorage.getItem('selectedLatitude') || '11.0168';
-            const lon = localStorage.getItem('selectedLongitude') || '76.9558';
+            const { lat, lon } = getSelectedCoordinates(11.0168, 76.9558);
             const storedLocation = localStorage.getItem('selectedLocation') || 'Selected Location';
 
             const ctx = document.getElementById('soilChart').getContext('2d');

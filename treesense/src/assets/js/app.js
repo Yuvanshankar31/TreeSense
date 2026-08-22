@@ -15,25 +15,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-      // Fetch current weather data from OpenWeather API
-      const currentWeatherResponse = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${location}&appid=6557810176c36fac5f0db536711a6c52&units=metric`);
-      const currentWeatherData = await currentWeatherResponse.json();
+      const geocodeResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`);
+      const geocodeData = await geocodeResponse.json();
 
-      console.log('Current Weather Data:', currentWeatherData);
-
-      // Check if current weather data is valid
-      if (currentWeatherData.cod !== 200) {
+      if (!geocodeData.results || geocodeData.results.length === 0) {
         alert('Error fetching current weather data. Please check the location.');
         return;
       }
 
-     
+      const { latitude, longitude } = geocodeData.results[0];
+      const currentWeatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code`);
+      const currentWeatherData = await currentWeatherResponse.json();
+
+      if (!currentWeatherResponse.ok || !currentWeatherData.current) {
+        alert('Error fetching current weather data. Please check the location.');
+        return;
+      }
 
       // Display current weather
       currentWeatherDiv.innerHTML = `
-        <p>Temperature: ${currentWeatherData.main.temp}°C</p>
-        <p>Humidity: ${currentWeatherData.main.humidity}%</p>
-        <p>Weather: ${currentWeatherData.weather[0].description}</p>
+        <p>Temperature: ${currentWeatherData.current.temperature_2m}°C</p>
+        <p>Humidity: ${currentWeatherData.current.relative_humidity_2m}%</p>
+        <p>Weather: ${describeWeatherCode(currentWeatherData.current.weather_code)}</p>
       `;
 
 

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tree Enumeration (Tree Count)</title>
   <!-- TensorFlow.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js" integrity="sha384-xc4sZTUOM2obsQR75Be0zGbt7Gb6mOVFJN4yBm30Xn0YQLDWIY+yrtFmLmIank6w" crossorigin="anonymous"></script>
   <!-- Stylesheets -->
   <link rel="stylesheet" href="/src/assets/css/styles.css">
   <style>
@@ -203,6 +203,17 @@
   input.addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file) return;
+
+    if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+      alert("Please select a supported image file.");
+      input.value = "";
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      alert("Please select an image smaller than 10 MB.");
+      input.value = "";
+      return;
+    }
     
     document.getElementById("file-name").textContent = `Selected: ${file.name}`;
     uploadedImg.src = URL.createObjectURL(file);

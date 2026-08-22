@@ -1,6 +1,5 @@
 document.addEventListener("DOMContentLoaded", async function() {
-    const lat = localStorage.getItem('selectedLatitude') || '11.0168';
-    const lon = localStorage.getItem('selectedLongitude') || '76.9558';
+    const { lat, lon } = getSelectedCoordinates(11.0168, 76.9558);
     const storedLocation = localStorage.getItem('selectedLocation') || 'Selected Location';
 
     const ctx = document.getElementById('mybarChart').getContext('2d');

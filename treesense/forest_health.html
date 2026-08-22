@@ -194,6 +194,14 @@ function analyzeForestHealth() {
     alert("Please select a canopy image file to analyze.");
     return;
   }
+  if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+    alert("Please select a supported image file.");
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    alert("Please select an image smaller than 10 MB.");
+    return;
+  }
 
   const reader = new FileReader();
   reader.onloadend = () => {
