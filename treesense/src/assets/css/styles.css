@@ -66,6 +66,20 @@ body {
   overflow-x: hidden;
 }
 
+body.module-page {
+  background: #ffffff;
+  padding: 24px;
+}
+
+body.detection-page {
+  font-family: 'Outfit', sans-serif;
+}
+
+body.chart-page {
+  background: #ffffff;
+  padding: 20px;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
@@ -357,6 +371,50 @@ img {
   transform: translateY(-4px);
   box-shadow: var(--shadow-lg);
   border-color: rgba(46, 196, 182, 0.3);
+}
+
+.module-card {
+  max-width: 1000px;
+  margin: 0 auto;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 32px;
+  box-shadow: var(--shadow-sm);
+}
+
+.module-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.module-header h2 {
+  font-size: 26px;
+  color: var(--primary);
+}
+
+.module-header p {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-top: 6px;
+}
+
+.historical-page .module-card {
+  max-width: 800px;
+}
+
+.species-page {
+  background-color: #ffffff;
+  text-align: center;
+}
+
+.species-page .module-card {
+  max-width: 1100px;
+}
+
+.chart-container {
+  max-width: 800px;
+  margin: 0 auto;
 }
 
 /* Hero Section */
@@ -851,4 +909,3 @@ img {
     align-items: center;
   }
 }
-

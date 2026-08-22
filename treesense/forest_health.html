@@ -6,32 +6,6 @@
   <title>Forest Health & Canopy Analyzer</title>
   <link rel="stylesheet" href="/src/assets/css/styles.css">
   <style>
-    body {
-      background: #ffffff;
-      padding: 24px;
-    }
-    .module-card {
-      max-width: 1000px;
-      margin: 0 auto;
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 32px;
-      box-shadow: var(--shadow-sm);
-    }
-    .module-header {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    .module-header h2 {
-      font-size: 26px;
-      color: var(--primary);
-    }
-    .module-header p {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-top: 6px;
-    }
     /* Circular Gauge Chart for FHI */
     .fhi-gauge-container {
       display: flex;
@@ -93,7 +67,7 @@
     }
   </style>
 </head>
-<body>
+<body class="module-page">
 
 <div class="module-card">
   <div class="module-header">
@@ -165,6 +139,7 @@
   </div>
 </div>
 
+<script src="/src/assets/js/shared/image-analysis.js"></script>
 <script>
 // RGB to HSL conversion helper
 function rgbToHsl(r, g, b) {
@@ -187,31 +162,17 @@ function rgbToHsl(r, g, b) {
   return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
 }
 
-function analyzeForestHealth() {
-  const fileInput = document.getElementById('health-image-file');
-  const file = fileInput.files[0];
-  if (!file) {
-    alert("Please select a canopy image file to analyze.");
-    return;
-  }
+async function analyzeForestHealth() {
+  const loaded = await GreenPulse.loadSelectedImage('health-image-file', "Please select a canopy image file to analyze.");
+  if (!loaded) return;
 
-  const reader = new FileReader();
-  reader.onloadend = () => {
     const origImg = document.getElementById('orig-img');
-    origImg.src = reader.result;
-
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.getElementById('health-mask-canvas');
-      const ctx = canvas.getContext('2d');
-
-      // Set canvas size matching the image dimensions
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
+    origImg.src = loaded.dataUrl;
+    const canvas = document.getElementById('health-mask-canvas');
+    const drawing = GreenPulse.drawImageToCanvas(loaded.image, canvas);
+    const ctx = drawing.ctx;
+    const imageData = drawing.imageData;
+    const data = imageData.data;
 
       let healthyCount = 0;
       let stressedCount = 0;
@@ -303,10 +264,6 @@ function analyzeForestHealth() {
       }
       recommendationText.textContent = recs;
       recommendationBox.style.display = 'block';
-    };
-    img.src = reader.result;
-  };
-  reader.readAsDataURL(file);
 }
 </script>
 

@@ -6,113 +6,44 @@
     <title>Temperature Trends</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
     <link rel="stylesheet" href="/src/assets/css/styles.css">
-    <style>
-        body {
-            background: #ffffff;
-            padding: 20px;
-        }
-        .chart-container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-    </style>
 </head>
-<body>
+<body class="chart-page">
     <div class="chart-container">
         <canvas id="tempChart" width="800" height="450"></canvas>
     </div>
 
+    <script src="/src/assets/js/shared/weather-charts.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", async function() {
-            const lat = localStorage.getItem('selectedLatitude') || '11.0168';
-            const lon = localStorage.getItem('selectedLongitude') || '76.9558';
-            const storedLocation = localStorage.getItem('selectedLocation') || 'Selected Location';
-
-            const ctx = document.getElementById('tempChart').getContext('2d');
-            
-            // Default fallback monthly mean temperatures
-            let monthlyTemp = [24.5, 25.8, 28.2, 30.1, 29.8, 27.6, 26.5, 26.3, 26.6, 26.4, 25.2, 24.1];
-            
-            try {
-                // Fetch real daily historical mean temperature for the full year of 2025
-                const response = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2025-01-01&end_date=2025-12-31&daily=temperature_2m_mean&timezone=auto`);
-                const result = await response.json();
-                
-                if (result.daily && result.daily.temperature_2m_mean) {
-                    const times = result.daily.time;
-                    const values = result.daily.temperature_2m_mean;
-                    
-                    // Aggregate daily averages to monthly averages
-                    const aggregatedSums = Array(12).fill(0);
-                    const aggregatedCounts = Array(12).fill(0);
-                    
-                    for (let i = 0; i < times.length; i++) {
-                        const date = new Date(times[i]);
-                        const month = date.getMonth(); // 0-11
-                        aggregatedSums[month] += (values[i] || 0);
-                        aggregatedCounts[month]++;
-                    }
-                    
-                    monthlyTemp = aggregatedSums.map((sum, index) => {
-                        return aggregatedCounts[index] > 0 ? parseFloat((sum / aggregatedCounts[index]).toFixed(1)) : 0;
-                    });
-                }
-            } catch (err) {
-                console.error("Failed to fetch live historical temperatures, using fallback.", err);
-            }
-
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: months,
-                    datasets: [{
-                        label: 'Mean Monthly Temperature (°C)',
-                        data: monthlyTemp,
-                        borderColor: '#2ec4b6',
-                        backgroundColor: 'rgba(46, 196, 182, 0.1)',
-                        fill: true,
-                        tension: 0.4,
-                        borderWidth: 3,
-                        pointBackgroundColor: '#0f3425',
-                        pointBorderColor: '#ffffff',
-                        pointHoverRadius: 7
-                    }]
+            const result = await GreenPulse.fetchMonthlySeries({
+                url: function(lat, lon) {
+                    return `https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2025-01-01&end_date=2025-12-31&daily=temperature_2m_mean&timezone=auto`;
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Mean Monthly Temperature in ' + storedLocation + ' (2025)',
-                            font: {
-                                size: 18,
-                                family: "'Outfit', sans-serif",
-                                weight: 'bold'
-                            },
-                            color: '#0f3425',
-                            padding: 20
-                        },
-                        legend: {
-                            labels: {
-                                font: {
-                                    family: "'Plus Jakarta Sans', sans-serif"
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            ticks: {
-                                callback: function(value) {
-                                    return value + '°C';
-                                }
-                            }
-                        }
-                    }
-                }
+                responseSection: 'daily',
+                field: 'temperature_2m_mean',
+                aggregation: 'mean',
+                rounding: 'fixed1',
+                fallback: [24.5, 25.8, 28.2, 30.1, 29.8, 27.6, 26.5, 26.3, 26.6, 26.4, 25.2, 24.1],
+                errorMessage: "Failed to fetch live historical temperatures, using fallback."
+            });
+            GreenPulse.createWeatherChart({
+                canvasId: 'tempChart',
+                chartType: 'line',
+                dataset: {
+                    label: 'Mean Monthly Temperature (°C)',
+                    data: result.values,
+                    borderColor: '#2ec4b6',
+                    backgroundColor: 'rgba(46, 196, 182, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointBackgroundColor: '#0f3425',
+                    pointBorderColor: '#ffffff',
+                    pointHoverRadius: 7
+                },
+                location: result.location,
+                title: 'Mean Monthly Temperature in ',
+                yTickSuffix: '°C'
             });
         });
     </script>

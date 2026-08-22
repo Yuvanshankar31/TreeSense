@@ -5,36 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Green Cover Estimator</title>
   <link rel="stylesheet" href="/src/assets/css/styles.css">
-  <style>
-    body {
-      background: #ffffff;
-      padding: 24px;
-    }
-    .module-card {
-      max-width: 1000px;
-      margin: 0 auto;
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 32px;
-      box-shadow: var(--shadow-sm);
-    }
-    .module-header {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    .module-header h2 {
-      font-size: 26px;
-      color: var(--primary);
-    }
-    .module-header p {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-top: 6px;
-    }
-  </style>
 </head>
-<body>
+<body class="module-page">
 
 <div class="module-card">
   <div class="module-header">
@@ -77,74 +49,24 @@
   </div>
 </div>
 
+<script src="/src/assets/js/shared/image-analysis.js"></script>
 <script>
-function processImage() {
-  const fileInput = document.getElementById('image-file');
-  const file = fileInput.files[0];
-  if (!file) {
-    alert("Please select a file first.");
-    return;
-  }
-  const reader = new FileReader();
+async function processImage() {
+  const loaded = await GreenPulse.loadSelectedImage('image-file');
+  if (!loaded) return;
 
-  reader.onloadend = () => {
-    const uploadedImage = document.getElementById('uploaded-image');
-    const processedImage = document.getElementById('processed-image');
-    const greenCoverPercentage = document.getElementById('green-cover-percentage');
-    const idleLandPercentage = document.getElementById('idle-land-percentage');
+  const uploadedImage = document.getElementById('uploaded-image');
+  const processedImage = document.getElementById('processed-image');
+  const greenCoverPercentage = document.getElementById('green-cover-percentage');
+  const idleLandPercentage = document.getElementById('idle-land-percentage');
+  const drawing = GreenPulse.drawImageToCanvas(loaded.image);
+  const result = GreenPulse.applyGreenMask(drawing.imageData, drawing.canvas.width, drawing.canvas.height);
 
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-
-      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      let blackPixelCount = 0;
-
-      // Calculate the mean green value
-      let totalGreen = 0;
-      for (let i = 1; i < imageData.data.length; i += 4) {
-        totalGreen += imageData.data[i];
-      }
-      const meanGreen = totalGreen / (imageData.data.length / 4);
-
-      for (let i = 0; i < imageData.data.length; i += 4) {
-        let gray = (imageData.data[i + 1]) * 0.587; // Keep only green channel
-
-        if (gray < meanGreen / 1.5) {
-          gray = 0;
-          blackPixelCount++;
-        } else {
-          gray = 255;
-        }
-
-        imageData.data[i] = gray;   // Red channel
-        imageData.data[i + 1] = gray; // Green channel
-        imageData.data[i + 2] = gray; // Blue channel
-        imageData.data[i + 3] = 255;  // Alpha channel
-      }
-
-      ctx.putImageData(imageData, 0, 0);
-
-      // Display the processed image and green cover percentage
-      processedImage.src = canvas.toDataURL();
-      const greenPercentVal = ((blackPixelCount / (canvas.width * canvas.height)) * 100).toFixed(2);
-      const idlePercentVal = (100 - greenPercentVal).toFixed(2);
-      
-      greenCoverPercentage.textContent = greenPercentVal + '%';
-      idleLandPercentage.textContent = idlePercentVal + '%';
-    };
-    img.src = reader.result;
-
-    // Display the uploaded image
-    uploadedImage.src = reader.result;
-  };
-
-  reader.readAsDataURL(file);
+  drawing.ctx.putImageData(drawing.imageData, 0, 0);
+  uploadedImage.src = loaded.dataUrl;
+  processedImage.src = drawing.canvas.toDataURL();
+  greenCoverPercentage.textContent = result.greenPercent + '%';
+  idleLandPercentage.textContent = result.idlePercent + '%';
 }
 </script>
 

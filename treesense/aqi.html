@@ -6,114 +6,45 @@
     <title>Air Quality Index (AQI)</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js"></script>
     <link rel="stylesheet" href="/src/assets/css/styles.css">
-    <style>
-        body {
-            background: #ffffff;
-            padding: 20px;
-        }
-        .chart-container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-    </style>
 </head>
-<body>
+<body class="chart-page">
     <div class="chart-container">
         <canvas id="aqiChart" width="800" height="450"></canvas>
     </div>
 
+    <script src="/src/assets/js/shared/weather-charts.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", async function() {
-            const lat = localStorage.getItem('selectedLatitude') || '11.0168';
-            const lon = localStorage.getItem('selectedLongitude') || '76.9558';
-            const storedLocation = localStorage.getItem('selectedLocation') || 'Selected Location';
-
-            const ctx = document.getElementById('aqiChart').getContext('2d');
-            
-            // Default fallback monthly average US AQI values
-            let monthlyAQI = [68, 74, 85, 90, 80, 55, 48, 52, 60, 72, 88, 75];
-            
-            try {
-                // Fetch real hourly US AQI for the full year of 2025
-                const response = await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=us_aqi&start_date=2025-01-01&end_date=2025-12-31`);
-                const result = await response.json();
-                
-                if (result.hourly && result.hourly.us_aqi) {
-                    const times = result.hourly.time;
-                    const values = result.hourly.us_aqi;
-                    
-                    // Aggregate hourly to monthly averages
-                    const aggregatedSums = Array(12).fill(0);
-                    const aggregatedCounts = Array(12).fill(0);
-                    
-                    for (let i = 0; i < times.length; i++) {
-                        const date = new Date(times[i]);
-                        const month = date.getMonth(); // 0-11
-                        aggregatedSums[month] += (values[i] || 0);
-                        aggregatedCounts[month]++;
-                    }
-                    
-                    monthlyAQI = aggregatedSums.map((sum, index) => {
-                        return aggregatedCounts[index] > 0 ? Math.round(sum / aggregatedCounts[index]) : 0;
-                    });
-                }
-            } catch (err) {
-                console.error("Failed to fetch live historical AQI, using fallback.", err);
-            }
-
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-            new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: months,
-                    datasets: [{
-                        label: 'Average US AQI',
-                        data: monthlyAQI,
-                        borderColor: '#e07a5f',
-                        backgroundColor: 'rgba(224, 122, 95, 0.15)',
-                        fill: true,
-                        tension: 0.3,
-                        borderWidth: 3,
-                        pointBackgroundColor: '#3d405b',
-                        pointBorderColor: '#ffffff',
-                        pointHoverRadius: 7
-                    }]
+            const result = await GreenPulse.fetchMonthlySeries({
+                url: function(lat, lon) {
+                    return `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${lat}&longitude=${lon}&hourly=us_aqi&start_date=2025-01-01&end_date=2025-12-31`;
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        title: {
-                            display: true,
-                            text: 'Air Quality Index (AQI) History in ' + storedLocation + ' (2025)',
-                            font: {
-                                size: 18,
-                                family: "'Outfit', sans-serif",
-                                weight: 'bold'
-                            },
-                            color: '#0f3425',
-                            padding: 20
-                        },
-                        legend: {
-                            labels: {
-                                font: {
-                                    family: "'Plus Jakarta Sans', sans-serif"
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return value + ' AQI';
-                                }
-                            }
-                        }
-                    }
-                }
+                responseSection: 'hourly',
+                field: 'us_aqi',
+                aggregation: 'mean',
+                rounding: 'round',
+                fallback: [68, 74, 85, 90, 80, 55, 48, 52, 60, 72, 88, 75],
+                errorMessage: "Failed to fetch live historical AQI, using fallback."
+            });
+            GreenPulse.createWeatherChart({
+                canvasId: 'aqiChart',
+                chartType: 'line',
+                dataset: {
+                    label: 'Average US AQI',
+                    data: result.values,
+                    borderColor: '#e07a5f',
+                    backgroundColor: 'rgba(224, 122, 95, 0.15)',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 3,
+                    pointBackgroundColor: '#3d405b',
+                    pointBorderColor: '#ffffff',
+                    pointHoverRadius: 7
+                },
+                location: result.location,
+                title: 'Air Quality Index (AQI) History in ',
+                yTickSuffix: ' AQI',
+                yAxis: { beginAtZero: true }
             });
         });
     </script>
