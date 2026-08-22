@@ -87,6 +87,8 @@
       if (response.ok) {
         knowledgeBase = await response.json();
         console.log("GreenPulse RAG knowledge base loaded successfully.");
+      } else {
+        console.warn(`project_knowledge.json fetch returned status ${response.status}. Using embedded knowledge base fallback.`);
       }
     } catch (e) {
       console.warn("Could not fetch project_knowledge.json. Using embedded knowledge base fallback.", e);

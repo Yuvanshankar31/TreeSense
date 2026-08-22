@@ -32,10 +32,14 @@
             
             // Default fallback monthly soil moisture averages (volumetric water content in %)
             let monthlyMoisture = [22.4, 18.5, 15.2, 14.1, 25.8, 38.4, 42.6, 40.2, 45.1, 48.3, 35.6, 26.2];
-            
+            let usedFallback = false;
+
             try {
                 // Fetch daily historical soil moisture (0-7cm) for the full year of 2025
                 const response = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2025-01-01&end_date=2025-12-31&daily=soil_moisture_0_to_7cm&timezone=auto`);
+                if (!response.ok) {
+                    throw new Error(`Archive API returned status ${response.status}`);
+                }
                 const result = await response.json();
                 
                 if (result.daily && result.daily.soil_moisture_0_to_7cm) {
@@ -57,8 +61,11 @@
                     monthlyMoisture = aggregatedSums.map((sum, index) => {
                         return aggregatedCounts[index] > 0 ? parseFloat((sum / aggregatedCounts[index]).toFixed(1)) : 0;
                     });
+                } else {
+                    throw new Error(result.reason || "Response is missing daily soil moisture data");
                 }
             } catch (err) {
+                usedFallback = true;
                 console.error("Failed to fetch live historical soil moisture, using fallback.", err);
             }
 
@@ -109,7 +116,7 @@
                     plugins: {
                         title: {
                             display: true,
-                            text: 'Average Soil Moisture (0-7cm) in ' + storedLocation + ' (2025)',
+                            text: 'Average Soil Moisture (0-7cm) in ' + storedLocation + ' (2025)' + (usedFallback ? ' — Offline Fallback Data' : ''),
                             font: {
                                 size: 18,
                                 family: "'Outfit', sans-serif",
