@@ -44,9 +44,11 @@
         };
     };
 
-    GreenPulse.applyGreenMask = function (imageData, width, height) {
+    GreenPulse.applyGreenMask = function (imageData) {
         let canopyPixelCount = 0;
         let totalGreen = 0;
+        const width = imageData.width;
+        const height = imageData.height;
 
         for (let i = 1; i < imageData.data.length; i += 4) {
             totalGreen += imageData.data[i];

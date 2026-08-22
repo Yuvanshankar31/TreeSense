@@ -61,9 +61,18 @@
 
     function setActiveNavigation() {
         const path = window.location.pathname;
-        const page = path === '/' || path === '/index.html'
-            ? 'home'
-            : path === '/predict.html' ? 'dashboard' : 'charts';
+        const pages = {
+            '/': 'home',
+            '/index.html': 'home',
+            '/index': 'home',
+            '/predict.html': 'dashboard',
+            '/predict': 'dashboard',
+            '/chart.html': 'charts',
+            '/chart': 'charts'
+        };
+        const page = pages[path];
+        if (!page) return;
+
         const activeLink = document.querySelector('.nav-link[data-page="' + page + '"]');
         if (activeLink) activeLink.classList.add('active');
     }

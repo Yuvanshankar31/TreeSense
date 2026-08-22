@@ -60,7 +60,7 @@ async function processImage() {
   const greenCoverPercentage = document.getElementById('green-cover-percentage');
   const idleLandPercentage = document.getElementById('idle-land-percentage');
   const drawing = GreenPulse.drawImageToCanvas(loaded.image);
-  const result = GreenPulse.applyGreenMask(drawing.imageData, drawing.canvas.width, drawing.canvas.height);
+  const result = GreenPulse.applyGreenMask(drawing.imageData);
 
   drawing.ctx.putImageData(drawing.imageData, 0, 0);
   uploadedImage.src = loaded.dataUrl;

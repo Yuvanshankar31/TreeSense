@@ -166,104 +166,104 @@ async function analyzeForestHealth() {
   const loaded = await GreenPulse.loadSelectedImage('health-image-file', "Please select a canopy image file to analyze.");
   if (!loaded) return;
 
-    const origImg = document.getElementById('orig-img');
-    origImg.src = loaded.dataUrl;
-    const canvas = document.getElementById('health-mask-canvas');
-    const drawing = GreenPulse.drawImageToCanvas(loaded.image, canvas);
-    const ctx = drawing.ctx;
-    const imageData = drawing.imageData;
-    const data = imageData.data;
+  const origImg = document.getElementById('orig-img');
+  origImg.src = loaded.dataUrl;
+  const canvas = document.getElementById('health-mask-canvas');
+  const drawing = GreenPulse.drawImageToCanvas(loaded.image, canvas);
+  const ctx = drawing.ctx;
+  const imageData = drawing.imageData;
+  const data = imageData.data;
 
-      let healthyCount = 0;
-      let stressedCount = 0;
-      let soilCount = 0;
+  let healthyCount = 0;
+  let stressedCount = 0;
+  let soilCount = 0;
 
-      // Color classification loops
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i+1];
-        const b = data[i+2];
+  // Color classification loops
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i];
+    const g = data[i+1];
+    const b = data[i+2];
 
-        const [h, s, l] = rgbToHsl(r, g, b);
+    const [h, s, l] = rgbToHsl(r, g, b);
 
-        // Classification Rules
-        if (l < 12 || l > 88 || (s < 16 && l < 60)) {
-          // Shadows, soil, non-vegetative: Dark grey/brown mask
-          data[i] = 120;     // Red
-          data[i+1] = 90;    // Green
-          data[i+2] = 80;    // Blue
-          soilCount++;
-        } else if (h >= 75 && h <= 165 && s > 15) {
-          // Healthy forest canopy: Green mask
-          data[i] = 40;
-          data[i+1] = 180;
-          data[i+2] = 50;
-          healthyCount++;
-        } else if (h >= 35 && h < 75 && s > 15) {
-          // Chlorotic/stressed canopy: Yellow/Orange mask
-          data[i] = 245;
-          data[i+1] = 180;
-          data[i+2] = 30;
-          stressedCount++;
-        } else {
-          // Bare land, soil: Brown mask
-          data[i] = 200;
-          data[i+1] = 80;
-          data[i+2] = 60;
-          soilCount++;
-        }
-      }
+    // Classification Rules
+    if (l < 12 || l > 88 || (s < 16 && l < 60)) {
+      // Shadows, soil, non-vegetative: Dark grey/brown mask
+      data[i] = 120;     // Red
+      data[i+1] = 90;    // Green
+      data[i+2] = 80;    // Blue
+      soilCount++;
+    } else if (h >= 75 && h <= 165 && s > 15) {
+      // Healthy forest canopy: Green mask
+      data[i] = 40;
+      data[i+1] = 180;
+      data[i+2] = 50;
+      healthyCount++;
+    } else if (h >= 35 && h < 75 && s > 15) {
+      // Chlorotic/stressed canopy: Yellow/Orange mask
+      data[i] = 245;
+      data[i+1] = 180;
+      data[i+2] = 30;
+      stressedCount++;
+    } else {
+      // Bare land, soil: Brown mask
+      data[i] = 200;
+      data[i+1] = 80;
+      data[i+2] = 60;
+      soilCount++;
+    }
+  }
 
-      // Draw the segmented visual condition mask
-      ctx.putImageData(imageData, 0, 0);
+  // Draw the segmented visual condition mask
+  ctx.putImageData(imageData, 0, 0);
 
-      // Calculations
-      const totalPixels = canvas.width * canvas.height;
-      const pctHealthyVal = ((healthyCount / totalPixels) * 100);
-      const pctStressedVal = ((stressedCount / totalPixels) * 100);
-      const pctSoilVal = ((soilCount / totalPixels) * 100);
+  // Calculations
+  const totalPixels = canvas.width * canvas.height;
+  const pctHealthyVal = ((healthyCount / totalPixels) * 100);
+  const pctStressedVal = ((stressedCount / totalPixels) * 100);
+  const pctSoilVal = ((soilCount / totalPixels) * 100);
 
-      // FHI Score Calculation
-      const fhiScore = Math.min(100, Math.round(pctHealthyVal + (0.45 * pctStressedVal)));
+  // FHI Score Calculation
+  const fhiScore = Math.min(100, Math.round(pctHealthyVal + (0.45 * pctStressedVal)));
 
-      // Render numeric values
-      document.getElementById('pct-healthy').textContent = pctHealthyVal.toFixed(1) + '%';
-      document.getElementById('pct-stressed').textContent = pctStressedVal.toFixed(1) + '%';
-      document.getElementById('pct-soil').textContent = pctSoilVal.toFixed(1) + '%';
-      document.getElementById('fhi-value').textContent = fhiScore;
+  // Render numeric values
+  document.getElementById('pct-healthy').textContent = pctHealthyVal.toFixed(1) + '%';
+  document.getElementById('pct-stressed').textContent = pctStressedVal.toFixed(1) + '%';
+  document.getElementById('pct-soil').textContent = pctSoilVal.toFixed(1) + '%';
+  document.getElementById('fhi-value').textContent = fhiScore;
 
-      // Update circular progress svg fill
-      const fhiFill = document.getElementById('fhi-fill');
-      // Circle perimeter = 2 * PI * r = 2 * 3.14159 * 64 ≈ 402
-      const offset = 402 - (fhiScore / 100) * 402;
-      fhiFill.style.strokeDashoffset = offset;
+  // Update circular progress svg fill
+  const fhiFill = document.getElementById('fhi-fill');
+  // Circle perimeter = 2 * PI * r = 2 * 3.14159 * 64 ≈ 402
+  const offset = 402 - (fhiScore / 100) * 402;
+  fhiFill.style.strokeDashoffset = offset;
 
-      // Adjust color of ring based on score
-      if (fhiScore >= 80) {
-        fhiFill.style.stroke = '#38b000'; // Green
-      } else if (fhiScore >= 50) {
-        fhiFill.style.stroke = '#f7b23b'; // Yellow/Orange
-      } else {
-        fhiFill.style.stroke = '#e07a5f'; // Red/Coral
-      }
+  // Adjust color of ring based on score
+  if (fhiScore >= 80) {
+    fhiFill.style.stroke = '#38b000'; // Green
+  } else if (fhiScore >= 50) {
+    fhiFill.style.stroke = '#f7b23b'; // Yellow/Orange
+  } else {
+    fhiFill.style.stroke = '#e07a5f'; // Red/Coral
+  }
 
-      // Populate Recommendations
-      const recommendationBox = document.getElementById('recommendation-box');
-      const recommendationText = document.getElementById('recommendation-text');
-      
-      let recs = '';
-      if (fhiScore >= 80) {
-        recs = 'Excellent ecosystem health! The canopy demonstrates high chlorophyll levels and dense vegetative structures. Continue regular satellite monitoring to track potential seasonal shifts.';
-        recommendationBox.style.borderLeftColor = '#38b000';
-      } else if (fhiScore >= 50) {
-        recs = 'Moderate canopy stress detected. Yellowish/chlorotic patterns indicate minor dry spell stresses or soil nutrient imbalances in specific zones. Reforestation checks and hydration reviews are recommended.';
-        recommendationBox.style.borderLeftColor = '#f7b23b';
-      } else {
-        recs = 'Alert: Low Forest Health index. High concentration of bare land or shaded soil spots indicates significant canopy degradation, deforestation risk, or extreme hydration stress. Active ecological restoration and tree plantation interventions are highly advised.';
-        recommendationBox.style.borderLeftColor = '#e07a5f';
-      }
-      recommendationText.textContent = recs;
-      recommendationBox.style.display = 'block';
+  // Populate Recommendations
+  const recommendationBox = document.getElementById('recommendation-box');
+  const recommendationText = document.getElementById('recommendation-text');
+
+  let recs = '';
+  if (fhiScore >= 80) {
+    recs = 'Excellent ecosystem health! The canopy demonstrates high chlorophyll levels and dense vegetative structures. Continue regular satellite monitoring to track potential seasonal shifts.';
+    recommendationBox.style.borderLeftColor = '#38b000';
+  } else if (fhiScore >= 50) {
+    recs = 'Moderate canopy stress detected. Yellowish/chlorotic patterns indicate minor dry spell stresses or soil nutrient imbalances in specific zones. Reforestation checks and hydration reviews are recommended.';
+    recommendationBox.style.borderLeftColor = '#f7b23b';
+  } else {
+    recs = 'Alert: Low Forest Health index. High concentration of bare land or shaded soil spots indicates significant canopy degradation, deforestation risk, or extreme hydration stress. Active ecological restoration and tree plantation interventions are highly advised.';
+    recommendationBox.style.borderLeftColor = '#e07a5f';
+  }
+  recommendationText.textContent = recs;
+  recommendationBox.style.display = 'block';
 }
 </script>
 
