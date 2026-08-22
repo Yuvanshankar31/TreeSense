@@ -22,8 +22,9 @@ document.addEventListener('DOMContentLoaded', () => {
       console.log('Current Weather Data:', currentWeatherData);
 
       // Check if current weather data is valid
-      if (currentWeatherData.cod !== 200) {
-        alert('Error fetching current weather data. Please check the location.');
+      if (!currentWeatherResponse.ok || currentWeatherData.cod !== 200) {
+        const reason = currentWeatherData.message || `status ${currentWeatherData.cod || currentWeatherResponse.status}`;
+        alert(`Error fetching current weather data (${reason}). Please check the location.`);
         return;
       }
 
@@ -40,8 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Show weather information
       weatherDiv.style.display = 'block';
     } catch (error) {
-      alert('An error occurred while fetching weather data.');
       console.error(error);
+      alert(`An error occurred while fetching weather data: ${error.message}`);
     }
   });
 });

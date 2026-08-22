@@ -7,10 +7,14 @@ document.addEventListener("DOMContentLoaded", async function() {
     
     // Default fallback monthly totals (Coimbatore historical typical)
     let monthlyPrecipitation = [5.2, 8.4, 21.0, 45.3, 72.8, 64.2, 59.5, 88.0, 112.4, 158.2, 92.6, 22.4];
-    
+    let usedFallback = false;
+
     try {
         // Fetch real daily historical precipitation for the full year of 2025
         const response = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=2025-01-01&end_date=2025-12-31&daily=precipitation_sum&timezone=auto`);
+        if (!response.ok) {
+            throw new Error(`Archive API returned status ${response.status}`);
+        }
         const result = await response.json();
         
         if (result.daily && result.daily.precipitation_sum) {
@@ -25,8 +29,11 @@ document.addEventListener("DOMContentLoaded", async function() {
                 aggregated[month] += (values[i] || 0);
             }
             monthlyPrecipitation = aggregated.map(val => parseFloat(val.toFixed(1)));
+        } else {
+            throw new Error(result.reason || "Response is missing daily precipitation data");
         }
     } catch (err) {
+        usedFallback = true;
         console.error("Failed to fetch live historical rainfall, using fallback.", err);
     }
 
@@ -51,7 +58,7 @@ document.addEventListener("DOMContentLoaded", async function() {
             plugins: {
                 title: {
                     display: true,
-                    text: 'Rainfall / Precipitation in ' + storedLocation + ' (2025)',
+                    text: 'Rainfall / Precipitation in ' + storedLocation + ' (2025)' + (usedFallback ? ' — Offline Fallback Data' : ''),
                     font: {
                         size: 18,
                         family: "'Outfit', sans-serif",
