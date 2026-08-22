@@ -82,5 +82,14 @@ At a $100 \times 100$ grid size, A* runs **11.9x faster** and expands **35x fewe
 ## Getting Started
 To start using the tools, run the project locally (e.g. by starting the server in the `treesense` directory using `npm start`) and navigate to the dashboard.
 
+## Tests
+Unit tests live in `treesense/tests` and run with [Vitest](https://vitest.dev/) in a jsdom environment. From the `treesense` directory:
+
+```bash
+npm install
+npm test              # run the suite
+npm run test:coverage # run with a coverage report for src/assets/js
+```
+
 ## Contributions
 Contributions are welcome! Please open a PR to get started on contributing to the project.

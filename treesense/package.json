@@ -3,9 +3,17 @@
   "version": "1.0.0",
   "description": "GreenPulse Web Dashboard",
   "scripts": {
-    "start": "serve -p 3000"
+    "start": "serve -p 3000",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "serve": "^14.2.4"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.9",
+    "jsdom": "^25.0.1",
+    "vitest": "^2.1.9"
   }
 }
