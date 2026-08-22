@@ -146,10 +146,19 @@ function processImage() {
       greenCoverPercentage.textContent = greenPercentVal + '%';
       idleLandPercentage.textContent = idlePercentVal + '%';
     };
+    img.onerror = () => {
+      console.error("Failed to decode the selected file as an image:", file.name);
+      alert("The selected file could not be loaded as an image. Please choose a valid image file.");
+    };
     img.src = reader.result;
 
     // Display the uploaded image
     uploadedImage.src = reader.result;
+  };
+
+  reader.onerror = () => {
+    console.error("Failed to read the selected file:", reader.error);
+    alert("Failed to read the selected file. Please try again with a different file.");
   };
 
   reader.readAsDataURL(file);

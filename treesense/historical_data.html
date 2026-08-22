@@ -98,6 +98,9 @@
                 // 1. Fetch Coordinates via Open-Meteo Geocoding API
                 try {
                     const geocodeResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`);
+                    if (!geocodeResponse.ok) {
+                        throw new Error(`Geocoding API returned status ${geocodeResponse.status}`);
+                    }
                     const geocodeData = await geocodeResponse.json();
 
                     if (!geocodeData.results || geocodeData.results.length === 0) {
@@ -123,7 +126,7 @@
 
                 } catch (err) {
                     console.error('Geocoding error:', err);
-                    alert('An error occurred during location lookup.');
+                    alert(`An error occurred during location lookup: ${err.message}`);
                 }
             });
 
@@ -134,7 +137,8 @@
                     const currentWeatherData = await currentWeatherResponse.json();
 
                     if (!currentWeatherResponse.ok || !currentWeatherData.current) {
-                        alert('Error fetching weather data.');
+                        const reason = currentWeatherData.reason || `status ${currentWeatherResponse.status}`;
+                        alert(`Error fetching weather data (${reason}).`);
                         return;
                     }
 
@@ -156,8 +160,8 @@
 
                     weatherDiv.style.display = 'block';
                 } catch (error) {
-                    alert('An error occurred while fetching weather data.');
                     console.error(error);
+                    alert(`An error occurred while fetching weather data: ${error.message}`);
                 }
             }
         });

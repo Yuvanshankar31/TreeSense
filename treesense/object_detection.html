@@ -280,21 +280,22 @@
         
         resolve([tensor, img_width, img_height]);
       };
-      img.onerror = (err) => reject(err);
+      img.onerror = () => reject(new Error("Failed to decode the selected file as an image"));
     });
   }
 
   // Execute predictions and free tensor memories
   async function run_model(inputTensor) {
     if (!model) throw new Error("TensorFlow.js model not ready");
-    
-    const outputTensor = model.predict(inputTensor);
-    const outputData = await outputTensor.data();
-    
-    // Dispose input and output tensors to prevent GPU memory leaks
-    tf.dispose([inputTensor, outputTensor]);
-    
-    return outputData;
+
+    let outputTensor = null;
+    try {
+      outputTensor = model.predict(inputTensor);
+      return await outputTensor.data();
+    } finally {
+      // Dispose input and output tensors to prevent GPU memory leaks
+      tf.dispose([inputTensor, outputTensor]);
+    }
   }
 
   // Parse YOLOv8 output, apply confidence threshold and NMS

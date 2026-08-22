@@ -18,8 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const geocodeResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`);
       const geocodeData = await geocodeResponse.json();
 
-      if (!geocodeData.results || geocodeData.results.length === 0) {
-        alert('Error fetching current weather data. Please check the location.');
+      if (!geocodeResponse.ok || !geocodeData.results || geocodeData.results.length === 0) {
+        const reason = geocodeData.reason || `status ${geocodeResponse.status}`;
+        alert(`Error looking up the location (${reason}). Please check the location.`);
         return;
       }
 
@@ -27,8 +28,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const currentWeatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code`);
       const currentWeatherData = await currentWeatherResponse.json();
 
+      console.log('Current Weather Data:', currentWeatherData);
+
+      // Check if current weather data is valid
       if (!currentWeatherResponse.ok || !currentWeatherData.current) {
-        alert('Error fetching current weather data. Please check the location.');
+        const reason = currentWeatherData.reason || `status ${currentWeatherResponse.status}`;
+        alert(`Error fetching current weather data (${reason}). Please check the location.`);
         return;
       }
 
@@ -43,8 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Show weather information
       weatherDiv.style.display = 'block';
     } catch (error) {
-      alert('An error occurred while fetching weather data.');
       console.error(error);
+      alert(`An error occurred while fetching weather data: ${error.message}`);
     }
   });
 });
