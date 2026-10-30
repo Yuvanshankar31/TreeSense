@@ -1,34 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Forest Health & Canopy Analyzer - GreenPulse</title>
+  <script src="/src/assets/js/coordinates.js"></script>
+  <script src="/src/assets/js/satellite.js"></script>
   <link rel="stylesheet" href="/src/assets/css/styles.css">
   <style>
-    html, body {
+    html,
+    body {
       height: 100%;
       margin: 0;
       padding: 0;
       overflow: hidden;
       background: #f4f7f5;
     }
+
     .fhi-ring {
       position: relative;
       width: 110px;
       height: 110px;
       margin: 0 auto;
     }
+
     .fhi-ring svg {
       width: 100%;
       height: 100%;
       transform: rotate(-90deg);
     }
+
     .fhi-circle-bg {
       fill: none;
       stroke: var(--border);
       stroke-width: 10;
     }
+
     .fhi-circle-fill {
       fill: none;
       stroke: var(--accent);
@@ -38,6 +46,7 @@
       stroke-linecap: round;
       transition: stroke-dashoffset 0.8s ease-in-out;
     }
+
     .fhi-value-text {
       position: absolute;
       top: 50%;
@@ -50,248 +59,298 @@
     }
   </style>
 </head>
+
 <body>
 
-<div class="studio-container">
-  <!-- Studio Header -->
-  <header class="studio-header">
-    <div class="studio-title-group">
-      <div class="studio-icon-badge">🩺</div>
-      <div>
-        <h2>Forest Health & Canopy Analyzer</h2>
-        <p>Color space HSL vegetative condition mapping & Forest Health Index (FHI)</p>
+  <div class="studio-container">
+    <!-- Studio Header -->
+    <header class="studio-header">
+      <div class="studio-title-group">
+        <div class="studio-icon-badge">🩺</div>
+        <div>
+          <h2>Forest Health & Canopy Analyzer</h2>
+          <p>Color space HSL vegetative condition mapping & Forest Health Index (FHI)</p>
+        </div>
       </div>
-    </div>
 
-    <div class="studio-actions">
-      <input type="file" id="health-image-file" class="file-input" accept="image/*" style="display: none;" onchange="handleFileSelected(event)">
+      <div class="studio-actions">
+        <input type="file" id="health-image-file" class="file-input" accept="image/*" style="display: none;"
+          onchange="handleFileSelected(event)">
+        <button class="btn-studio-ghost" id="btn-live-satellite" onclick="loadLiveSatelliteImagery()">
+        <span>🛰️</span> Live Satellite View
+      </button>
       <button class="btn-studio-ghost" onclick="document.getElementById('health-image-file').click()">
-        <span>📁</span> Browse Imagery
-      </button>
-      <button class="btn-studio-ghost" onclick="loadSampleImage()">
-        <span>🖼️</span> Demo Canopy View
-      </button>
-      <button onclick="analyzeForestHealth()" class="btn-studio-primary">
-        <span>⚡</span> Run Diagnostics
-      </button>
-    </div>
-  </header>
+          <span>📁</span> Browse Imagery
+        </button>
+        <button class="btn-studio-ghost" onclick="loadSampleImage()">
+          <span>🖼️</span> Demo Canopy View
+        </button>
+        <button onclick="analyzeForestHealth()" class="btn-studio-primary">
+          <span>⚡</span> Run Diagnostics
+        </button>
+      </div>
+    </header>
 
-  <!-- Studio Body: Viewers (Left) + Analytics (Right) -->
-  <div class="studio-body">
-    <!-- Viewers Grid -->
-    <div class="studio-viewers-grid">
-      <div class="studio-viewer-card">
-        <div class="viewer-header">
-          <div class="viewer-tag">
-            <span>📷</span> Original Forest Canopy
+    <!-- Studio Body: Viewers (Left) + Analytics (Right) -->
+    <div class="studio-body">
+      <!-- Viewers Grid -->
+      <div class="studio-viewers-grid">
+        <div class="studio-viewer-card">
+          <div class="viewer-header">
+            <div class="viewer-tag">
+              <span>📷</span> Original Forest Canopy
+            </div>
+            <span id="health-img-meta" style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Aerial
+              Survey</span>
           </div>
-          <span id="health-img-meta" style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Aerial Survey</span>
-        </div>
-        <div class="viewer-canvas-stage">
-          <img id="orig-img" src="/images/image.png" alt="Original Canopy">
-        </div>
-      </div>
-
-      <div class="studio-viewer-card">
-        <div class="viewer-header">
-          <div class="viewer-tag">
-            <span>🔬</span> Condition Heatmap
+          <div class="viewer-canvas-stage">
+            <img id="orig-img" src="/images/image.png" alt="Original Canopy">
           </div>
-          <span style="font-size: 11px; color: #00b488; font-weight: 700;">🟢 Healthy • 🟡 Stressed • 🟤 Soil</span>
         </div>
-        <div class="viewer-canvas-stage">
-          <canvas id="health-mask-canvas"></canvas>
+
+        <div class="studio-viewer-card">
+          <div class="viewer-header">
+            <div class="viewer-tag">
+              <span>🔬</span> Condition Heatmap
+            </div>
+            <span style="font-size: 11px; color: #00b488; font-weight: 700;">🟢 Healthy • 🟡 Stressed • 🟤 Soil</span>
+          </div>
+          <div class="viewer-canvas-stage">
+            <canvas id="health-mask-canvas"></canvas>
+          </div>
         </div>
       </div>
+
+      <!-- Right Analytics & Metrics Panel (No scroll needed, fits neatly) -->
+      <aside class="studio-metrics-panel">
+        <div class="panel-section-title">
+          <span>🩺</span> Forest Health Index (FHI)
+        </div>
+
+        <!-- Circular Gauge -->
+        <div style="text-align: center; padding: 6px 0;">
+          <div class="fhi-ring">
+            <svg>
+              <circle class="fhi-circle-bg" cx="55" cy="55" r="48"></circle>
+              <circle id="fhi-fill" class="fhi-circle-fill" cx="55" cy="55" r="48"
+                style="stroke-dasharray: 302; stroke-dashoffset: 302;"></circle>
+            </svg>
+            <div class="fhi-value-text" id="fhi-value">84</div>
+          </div>
+          <div style="font-size: 12px; font-weight: 700; color: var(--secondary); margin-top: 6px;">Ecosystem Health
+            Score</div>
+        </div>
+
+        <!-- Health Breakdown Metric Cards -->
+        <div class="panel-section-title">
+          <span>🌱</span> Vegetative Breakdown
+        </div>
+
+        <div class="studio-status-strip">
+          <span style="color: #2b8000; font-weight: 700;">💚 Healthy Canopy</span>
+          <strong id="pct-healthy" style="color: #2b8000; font-size: 14px;">76.4%</strong>
+        </div>
+
+        <div class="studio-status-strip">
+          <span style="color: #c08018; font-weight: 700;">💛 Stressed Canopy</span>
+          <strong id="pct-stressed" style="color: #c08018; font-size: 14px;">12.2%</strong>
+        </div>
+
+        <div class="studio-status-strip">
+          <span style="color: #c95a3b; font-weight: 700;">🤎 Bare Soil / Shaded</span>
+          <strong id="pct-soil" style="color: #c95a3b; font-size: 14px;">11.4%</strong>
+        </div>
+
+        <!-- Recommendation Banner -->
+        <div class="studio-insight-box" id="recommendation-box">
+          <strong>Insight:</strong> <span id="recommendation-text">High chlorophyll vigor detected across the canopy.
+            Minimal moisture stress indicators.</span>
+        </div>
+      </aside>
     </div>
-
-    <!-- Right Analytics & Metrics Panel (No scroll needed, fits neatly) -->
-    <aside class="studio-metrics-panel">
-      <div class="panel-section-title">
-        <span>🩺</span> Forest Health Index (FHI)
-      </div>
-
-      <!-- Circular Gauge -->
-      <div style="text-align: center; padding: 6px 0;">
-        <div class="fhi-ring">
-          <svg>
-            <circle class="fhi-circle-bg" cx="55" cy="55" r="48"></circle>
-            <circle id="fhi-fill" class="fhi-circle-fill" cx="55" cy="55" r="48" style="stroke-dasharray: 302; stroke-dashoffset: 302;"></circle>
-          </svg>
-          <div class="fhi-value-text" id="fhi-value">84</div>
-        </div>
-        <div style="font-size: 12px; font-weight: 700; color: var(--secondary); margin-top: 6px;">Ecosystem Health Score</div>
-      </div>
-
-      <!-- Health Breakdown Metric Cards -->
-      <div class="panel-section-title">
-        <span>🌱</span> Vegetative Breakdown
-      </div>
-
-      <div class="studio-status-strip">
-        <span style="color: #2b8000; font-weight: 700;">💚 Healthy Canopy</span>
-        <strong id="pct-healthy" style="color: #2b8000; font-size: 14px;">76.4%</strong>
-      </div>
-
-      <div class="studio-status-strip">
-        <span style="color: #c08018; font-weight: 700;">💛 Stressed Canopy</span>
-        <strong id="pct-stressed" style="color: #c08018; font-size: 14px;">12.2%</strong>
-      </div>
-
-      <div class="studio-status-strip">
-        <span style="color: #c95a3b; font-weight: 700;">🤎 Bare Soil / Shaded</span>
-        <strong id="pct-soil" style="color: #c95a3b; font-size: 14px;">11.4%</strong>
-      </div>
-
-      <!-- Recommendation Banner -->
-      <div class="studio-insight-box" id="recommendation-box">
-        <strong>Insight:</strong> <span id="recommendation-text">High chlorophyll vigor detected across the canopy. Minimal moisture stress indicators.</span>
-      </div>
-    </aside>
   </div>
-</div>
 
-<script>
-let currentImageSrc = "/images/image.png";
+  <script>
+    let currentImageSrc = "/images/image.png";
 
-function handleFileSelected(event) {
-  const file = event.target.files[0];
-  if (!file) return;
+    function handleFileSelected(event) {
+      const file = event.target.files[0];
+      if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    currentImageSrc = e.target.result;
-    document.getElementById('orig-img').src = currentImageSrc;
-    document.getElementById('health-img-meta').textContent = file.name.substring(0, 16);
-    analyzeForestHealth();
-  };
-  reader.readAsDataURL(file);
-}
-
-function loadSampleImage() {
-  currentImageSrc = "/images/image.png";
-  document.getElementById('orig-img').src = currentImageSrc;
-  document.getElementById('health-img-meta').textContent = "Drone Canopy View";
-  analyzeForestHealth();
-}
-
-function rgbToHsl(r, g, b) {
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  let h, s, l = (max + min) / 2;
-
-  if (max === min) {
-    h = s = 0; 
-  } else {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-      case g: h = (b - r) / d + 2; break;
-      case b: h = (r - g) / d + 4; break;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        currentImageSrc = e.target.result;
+        document.getElementById('orig-img').src = currentImageSrc;
+        document.getElementById('health-img-meta').textContent = file.name.substring(0, 16);
+        analyzeForestHealth();
+      };
+      reader.readAsDataURL(file);
     }
-    h /= 6;
-  }
-  return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
-}
 
-function analyzeForestHealth() {
-  const origImg = document.getElementById('orig-img');
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  img.onload = () => {
-    const canvas = document.getElementById('health-mask-canvas');
-    const ctx = canvas.getContext('2d');
+    async function loadLiveSatelliteImagery() {
+      const { lat, lon } = (typeof getSelectedCoordinates === "function") 
+        ? getSelectedCoordinates(11.0168, 76.9558) 
+        : { lat: 11.0168, lon: 76.9558 };
+      const locName = localStorage.getItem('selectedLocation') || 'Live Survey Quadrant';
+      const metaEl = document.getElementById('health-img-meta');
+      if (metaEl) metaEl.textContent = `🛰️ ${locName.substring(0, 16)}`;
 
-    canvas.width = img.naturalWidth || img.width;
-    canvas.height = img.naturalHeight || img.height;
-    ctx.drawImage(img, 0, 0);
-
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const data = imageData.data;
-
-    let healthyCount = 0;
-    let stressedCount = 0;
-    let soilCount = 0;
-
-    for (let i = 0; i < data.length; i += 4) {
-      const r = data[i];
-      const g = data[i+1];
-      const b = data[i+2];
-
-      const [h, s, l] = rgbToHsl(r, g, b);
-
-      if (l < 12 || l > 88 || (s < 16 && l < 60)) {
-        data[i] = 120;
-        data[i+1] = 90;
-        data[i+2] = 80;
-        soilCount++;
-      } else if (h >= 75 && h <= 165 && s > 15) {
-        data[i] = 40;
-        data[i+1] = 180;
-        data[i+2] = 50;
-        healthyCount++;
-      } else if (h >= 35 && h < 75 && s > 15) {
-        data[i] = 245;
-        data[i+1] = 180;
-        data[i+2] = 30;
-        stressedCount++;
-      } else {
-        data[i] = 200;
-        data[i+1] = 80;
-        data[i+2] = 60;
-        soilCount++;
+      try {
+        if (window.GreenPulseSatellite) {
+          const res = await window.GreenPulseSatellite.fetchLiveSatelliteImage(lat, lon, 16);
+          currentImageSrc = res.dataUrl;
+          document.getElementById('orig-img').src = currentImageSrc;
+          analyzeForestHealth();
+          return;
+        }
+      } catch (e) {
+        console.warn("Satellite fetch error:", e);
       }
+      loadSampleImage();
     }
 
-    ctx.putImageData(imageData, 0, 0);
-
-    const totalPixels = canvas.width * canvas.height;
-    const pctHealthyVal = ((healthyCount / totalPixels) * 100);
-    const pctStressedVal = ((stressedCount / totalPixels) * 100);
-    const pctSoilVal = ((soilCount / totalPixels) * 100);
-
-    const fhiScore = Math.min(100, Math.round(pctHealthyVal + (0.45 * pctStressedVal)));
-
-    document.getElementById('pct-healthy').textContent = pctHealthyVal.toFixed(1) + '%';
-    document.getElementById('pct-stressed').textContent = pctStressedVal.toFixed(1) + '%';
-    document.getElementById('pct-soil').textContent = pctSoilVal.toFixed(1) + '%';
-    document.getElementById('fhi-value').textContent = fhiScore;
-
-    const fhiFill = document.getElementById('fhi-fill');
-    // Perimeter for r=48 is 2 * PI * 48 ≈ 302
-    const offset = 302 - (fhiScore / 100) * 302;
-    fhiFill.style.strokeDashoffset = offset;
-
-    if (fhiScore >= 80) {
-      fhiFill.style.stroke = '#00e5a3';
-    } else if (fhiScore >= 50) {
-      fhiFill.style.stroke = '#f7b23b';
-    } else {
-      fhiFill.style.stroke = '#e07a5f';
+    function loadSampleImage() {
+      currentImageSrc = "/images/image.png";
+      document.getElementById('orig-img').src = currentImageSrc;
+      document.getElementById('health-img-meta').textContent = "Drone Canopy View";
+      analyzeForestHealth();
     }
 
-    const recommendationText = document.getElementById('recommendation-text');
-    let recs = '';
-    if (fhiScore >= 80) {
-      recs = 'Excellent ecosystem health! Dense vegetative crown structures and strong chlorophyll reflectance observed across quadrant.';
-    } else if (fhiScore >= 50) {
-      recs = 'Moderate canopy stress detected. Minor chlorotic patches indicate seasonal moisture stress or soil nutrient variations.';
-    } else {
-      recs = 'High risk: Significant bare ground exposure and low vegetative vigor. Recommended target zone for restorative planting.';
-    }
-    recommendationText.textContent = recs;
-  };
-  img.src = origImg.src;
-}
+    function rgbToHsl(r, g, b) {
+      r /= 255; g /= 255; b /= 255;
+      const max = Math.max(r, g, b), min = Math.min(r, g, b);
+      let h, s, l = (max + min) / 2;
 
-window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    analyzeForestHealth();
-  }, 200);
-});
-</script>
+      if (max === min) {
+        h = s = 0;
+      } else {
+        const d = max - min;
+        s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+        switch (max) {
+          case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+          case g: h = (b - r) / d + 2; break;
+          case b: h = (r - g) / d + 4; break;
+        }
+        h /= 6;
+      }
+      return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+    }
+
+    function analyzeForestHealth() {
+      const origImg = document.getElementById('orig-img');
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const canvas = document.getElementById('health-mask-canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        ctx.drawImage(img, 0, 0);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const data = imageData.data;
+
+        let healthyCount = 0;
+        let stressedCount = 0;
+        let soilCount = 0;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+
+          const [h, s, l] = rgbToHsl(r, g, b);
+
+          if (l < 12 || l > 88 || (s < 16 && l < 60)) {
+            data[i] = 120;
+            data[i + 1] = 90;
+            data[i + 2] = 80;
+            soilCount++;
+          } else if (h >= 75 && h <= 165 && s > 15) {
+            data[i] = 40;
+            data[i + 1] = 180;
+            data[i + 2] = 50;
+            healthyCount++;
+          } else if (h >= 35 && h < 75 && s > 15) {
+            data[i] = 245;
+            data[i + 1] = 180;
+            data[i + 2] = 30;
+            stressedCount++;
+          } else {
+            data[i] = 200;
+            data[i + 1] = 80;
+            data[i + 2] = 60;
+            soilCount++;
+          }
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+
+        const totalPixels = canvas.width * canvas.height;
+        const pctHealthyVal = ((healthyCount / totalPixels) * 100);
+        const pctStressedVal = ((stressedCount / totalPixels) * 100);
+        const pctSoilVal = ((soilCount / totalPixels) * 100);
+
+        const fhiScore = Math.min(100, Math.round(pctHealthyVal + (0.45 * pctStressedVal)));
+
+        document.getElementById('pct-healthy').textContent = pctHealthyVal.toFixed(1) + '%';
+        document.getElementById('pct-stressed').textContent = pctStressedVal.toFixed(1) + '%';
+        document.getElementById('pct-soil').textContent = pctSoilVal.toFixed(1) + '%';
+        document.getElementById('fhi-value').textContent = fhiScore;
+
+        const fhiFill = document.getElementById('fhi-fill');
+        const offset = 302 - (fhiScore / 100) * 302;
+        fhiFill.style.strokeDashoffset = offset;
+
+        if (fhiScore >= 80) {
+          fhiFill.style.stroke = '#00e5a3';
+        } else if (fhiScore >= 50) {
+          fhiFill.style.stroke = '#f7b23b';
+        } else {
+          fhiFill.style.stroke = '#e07a5f';
+        }
+
+        const recommendationBox = document.getElementById('recommendation-box');
+        const recommendationText = document.getElementById('recommendation-text');
+
+        let recs = '';
+        if (fhiScore >= 80) {
+          recs = 'Excellent ecosystem health! The canopy demonstrates high chlorophyll levels and dense vegetative structures. Continue regular satellite monitoring to track potential seasonal shifts.';
+          recommendationBox.style.borderLeftColor = '#38b000';
+        } else if (fhiScore >= 50) {
+          recs = 'Moderate canopy stress detected. Yellowish/chlorotic patterns indicate minor dry spell stresses or soil nutrient imbalances in specific zones. Reforestation checks and hydration reviews are recommended.';
+          recommendationBox.style.borderLeftColor = '#f7b23b';
+        } else {
+          recs = 'Alert: Low Forest Health index. High concentration of bare land or shaded soil spots indicates significant canopy degradation, deforestation risk, or extreme hydration stress. Active ecological restoration and tree plantation interventions are highly advised.';
+          recommendationBox.style.borderLeftColor = '#e07a5f';
+        }
+        recommendationText.textContent = recs;
+        recommendationBox.style.display = 'block';
+      };
+      img.src = currentImageSrc;
+    }
+
+    window.addEventListener("storage", (e) => {
+      if (e.key === "selectedLatitude" || e.key === "selectedLongitude") {
+        loadLiveSatelliteImagery();
+      }
+    });
+    window.addEventListener("message", (e) => {
+      if (e.data && e.data.type === "greenpulse-location-update") {
+        loadLiveSatelliteImagery();
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+      if (localStorage.getItem('selectedLatitude')) {
+        loadLiveSatelliteImagery();
+      } else {
+        analyzeForestHealth();
+      }
+    });
+  </script>
 
 </body>
+
 </html>

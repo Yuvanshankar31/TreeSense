@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Weather Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.1/chart.min.js" integrity="sha384-7NrRHqlWUj2hJl3a/dZj/a1GxuQc56mJ3aYsEnydBYrY1jR+RSt6SBvK3sHfj+mJ" crossorigin="anonymous"></script>
+    <script src="/src/assets/js/coordinates.js"></script>
+    <script src="/src/assets/js/weather.js"></script>
     <link rel="stylesheet" href="/src/assets/css/styles.css">
     <script src="/src/assets/js/script.js"></script>
     <style>
@@ -86,8 +88,7 @@
             const storedLocation = localStorage.getItem('selectedLocation');
             if (storedLocation) {
                 locationInput.value = storedLocation;
-                const lat = localStorage.getItem('selectedLatitude') || '11.0168';
-                const lon = localStorage.getItem('selectedLongitude') || '76.9558';
+                const { lat, lon } = getSelectedCoordinates(11.0168, 76.9558);
                 fetchWeather(storedLocation, lat, lon);
             }
 
@@ -124,6 +125,9 @@
                 // 1. Fetch Coordinates via Open-Meteo Geocoding API
                 try {
                     const geocodeResponse = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(location)}&count=1&language=en&format=json`);
+                    if (!geocodeResponse.ok) {
+                        throw new Error(`Geocoding API returned status ${geocodeResponse.status}`);
+                    }
                     const geocodeData = await geocodeResponse.json();
 
                     if (!geocodeData.results || geocodeData.results.length === 0) {
@@ -149,18 +153,19 @@
 
                 } catch (err) {
                     console.error('Geocoding error:', err);
-                    alert('An error occurred during location lookup.');
+                    alert(`An error occurred during location lookup: ${err.message}`);
                 }
             });
 
             async function fetchWeather(locationName, lat, lon) {
                 try {
                     // Fetch weather using coordinates or location query
-                    const currentWeatherResponse = await fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=6557810176c36fac5f0db536711a6c52&units=metric`);
+                    const currentWeatherResponse = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code`);
                     const currentWeatherData = await currentWeatherResponse.json();
 
-                    if (currentWeatherData.cod !== 200) {
-                        alert('Error fetching weather data.');
+                    if (!currentWeatherResponse.ok || !currentWeatherData.current) {
+                        const reason = currentWeatherData.reason || `status ${currentWeatherResponse.status}`;
+                        alert(`Error fetching weather data (${reason}).`);
                         return;
                     }
 
@@ -168,22 +173,22 @@
                     currentWeatherDiv.innerHTML = `
                         <div class="metric-card">
                             <div class="metric-label">🌡️ Temperature</div>
-                            <div class="metric-value">${currentWeatherData.main.temp.toFixed(1)}°C</div>
+                            <div class="metric-value">${currentWeatherData.current.temperature_2m.toFixed(1)}°C</div>
                         </div>
                         <div class="metric-card" style="border-left-color: #0077b6; background: rgba(0, 119, 182, 0.05);">
                             <div class="metric-label" style="color: #0077b6;">💧 Humidity</div>
-                            <div class="metric-value" style="color: #03045e;">${currentWeatherData.main.humidity}%</div>
+                            <div class="metric-value" style="color: #03045e;">${currentWeatherData.current.relative_humidity_2m}%</div>
                         </div>
                         <div class="metric-card" style="border-left-color: #e07a5f; background: rgba(224, 122, 95, 0.08);">
                             <div class="metric-label" style="color: #c95a3b;">☁️ Conditions</div>
-                            <div class="metric-value" style="color: #a83d20; font-size: 18px; font-weight:700; margin-top:12px; text-transform:capitalize;">${currentWeatherData.weather[0].description}</div>
+                            <div class="metric-value" style="color: #a83d20; font-size: 18px; font-weight:700; margin-top:12px; text-transform:capitalize;">${describeWeatherCode(currentWeatherData.current.weather_code)}</div>
                         </div>
                     `;
 
                     weatherDiv.style.display = 'block';
                 } catch (error) {
-                    alert('An error occurred while fetching weather data.');
                     console.error(error);
+                    alert(`An error occurred while fetching weather data: ${error.message}`);
                 }
             }
         });

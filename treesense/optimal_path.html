@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Optimal Pathing - GreenPulse</title>
+  <script src="/src/assets/js/coordinates.js"></script>
+  <script src="/src/assets/js/satellite.js"></script>
   <link rel="stylesheet" href="/src/assets/css/styles.css">
   <style>
-    html, body {
+    html,
+    body {
       height: 100%;
       margin: 0;
       padding: 0;
@@ -15,351 +19,379 @@
     }
   </style>
 </head>
+
 <body>
 
-<div class="studio-container">
-  <!-- Studio Header -->
-  <header class="studio-header">
-    <div class="studio-title-group">
-      <div class="studio-icon-badge">🛣️</div>
-      <div>
-        <h2>Optimal Pathing (A* Search)</h2>
-        <p>Heuristic graph navigation avoiding canopy density obstacles</p>
+  <div class="studio-container">
+    <!-- Studio Header -->
+    <header class="studio-header">
+      <div class="studio-title-group">
+        <div class="studio-icon-badge">🛣️</div>
+        <div>
+          <h2>Optimal Pathing (A* Search)</h2>
+          <p>Heuristic graph navigation avoiding canopy density obstacles</p>
+        </div>
       </div>
-    </div>
 
-    <div class="studio-actions">
-      <input type="file" id="image-file" class="file-input" accept="image/*" style="display: none;" onchange="handleFileSelected(event)">
+      <div class="studio-actions">
+        <input type="file" id="image-file" class="file-input" accept="image/*" style="display: none;"
+          onchange="handleFileSelected(event)">
+        <button class="btn-studio-ghost" id="btn-live-satellite" onclick="loadLiveSatelliteImagery()">
+        <span>🛰️</span> Live Satellite View
+      </button>
       <button class="btn-studio-ghost" onclick="document.getElementById('image-file').click()">
-        <span>📁</span> Browse Map
-      </button>
-      <button class="btn-studio-ghost" onclick="loadSampleImage()">
-        <span>🖼️</span> Demo Site Map
-      </button>
-      <button onclick="processImage()" class="btn-studio-primary">
-        <span>⚡</span> Calculate Route
-      </button>
-    </div>
-  </header>
+          <span>📁</span> Browse Map
+        </button>
+        <button class="btn-studio-ghost" onclick="loadSampleImage()">
+          <span>🖼️</span> Demo Site Map
+        </button>
+        <button onclick="processImage()" class="btn-studio-primary">
+          <span>⚡</span> Calculate Route
+        </button>
+      </div>
+    </header>
 
-  <!-- Studio Body: Viewers (Left) + Analytics (Right) -->
-  <div class="studio-body">
-    <!-- Viewers Grid -->
-    <div class="studio-viewers-grid">
-      <div class="studio-viewer-card">
-        <div class="viewer-header">
-          <div class="viewer-tag">
-            <span>🗺️</span> Survey Site Map
+    <!-- Studio Body: Viewers (Left) + Analytics (Right) -->
+    <div class="studio-body">
+      <!-- Viewers Grid -->
+      <div class="studio-viewers-grid">
+        <div class="studio-viewer-card">
+          <div class="viewer-header">
+            <div class="viewer-tag">
+              <span>🗺️</span> Survey Site Map
+            </div>
+            <span id="map-meta" style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Aerial
+              Surface</span>
           </div>
-          <span id="map-meta" style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Aerial Surface</span>
-        </div>
-        <div class="viewer-canvas-stage">
-          <img id="uploaded-image" src="/images/image.png" alt="Site Map">
-        </div>
-      </div>
-
-      <div class="studio-viewer-card">
-        <div class="viewer-header">
-          <div class="viewer-tag">
-            <span>🧭</span> Optimal A* Route Overlay
+          <div class="viewer-canvas-stage">
+            <img id="uploaded-image" src="/images/image.png" alt="Site Map">
           </div>
-          <span style="font-size: 11px; color: #e07a5f; font-weight: 700;">Start (Green) → Goal (Red)</span>
         </div>
-        <div class="viewer-canvas-stage">
-          <img id="processed-image" src="/images/treeicon.png" alt="A* Optimal Route">
+
+        <div class="studio-viewer-card">
+          <div class="viewer-header">
+            <div class="viewer-tag">
+              <span>🧭</span> Optimal A* Route Overlay
+            </div>
+            <span style="font-size: 11px; color: #e07a5f; font-weight: 700;">Start (Green) → Goal (Red)</span>
+          </div>
+          <div class="viewer-canvas-stage">
+            <img id="processed-image" src="/images/treeicon.png" alt="A* Optimal Route">
+          </div>
         </div>
       </div>
+
+      <!-- Right Analytics & Metrics Panel (No scroll needed, fits neatly) -->
+      <aside class="studio-metrics-panel">
+        <div class="panel-section-title">
+          <span>📊</span> Path Telemetry
+        </div>
+
+        <!-- Green Cover / Obstacle Metric -->
+        <div class="metric-tile">
+          <div class="metric-tile-label">Canopy Obstacle Density</div>
+          <div class="metric-tile-val" id="green-cover-percentage">64.85%</div>
+          <div class="metric-progress-bg">
+            <div class="metric-progress-fill" id="green-progress" style="width: 64.85%;"></div>
+          </div>
+        </div>
+
+        <!-- Traversable Area -->
+        <div class="metric-tile danger-accent">
+          <div class="metric-tile-label">Accessible Open Ground</div>
+          <div class="metric-tile-val" id="idle-land-percentage">35.15%</div>
+          <div class="metric-progress-bg">
+            <div class="metric-progress-fill danger-fill" id="idle-progress" style="width: 35.15%;"></div>
+          </div>
+        </div>
+
+        <!-- Navigation Diagnostics -->
+        <div class="panel-section-title">
+          <span>⚡</span> Routing Specs
+        </div>
+
+        <div class="studio-status-strip">
+          <span>Algorithm</span>
+          <strong style="color: #00b488;">A* Search</strong>
+        </div>
+
+        <div class="studio-status-strip">
+          <span>Heuristic</span>
+          <span>Octile (8-Way Diagonal)</span>
+        </div>
+
+        <div class="studio-status-strip">
+          <span>Occupancy Grid</span>
+          <span>60 × 60 Downsampled</span>
+        </div>
+
+        <div class="studio-status-strip">
+          <span>Path Status</span>
+          <strong style="color: #38b000;">Cleared (No Blockades)</strong>
+        </div>
+
+        <!-- Insight Box -->
+        <div class="studio-insight-box">
+          Octile heuristic A* expands 11.9x faster than Dijkstra across large survey grids while skirting dense crowns.
+        </div>
+      </aside>
     </div>
-
-    <!-- Right Analytics & Metrics Panel (No scroll needed, fits neatly) -->
-    <aside class="studio-metrics-panel">
-      <div class="panel-section-title">
-        <span>📊</span> Path Telemetry
-      </div>
-
-      <!-- Green Cover / Obstacle Metric -->
-      <div class="metric-tile">
-        <div class="metric-tile-label">Canopy Obstacle Density</div>
-        <div class="metric-tile-val" id="green-cover-percentage">64.85%</div>
-        <div class="metric-progress-bg">
-          <div class="metric-progress-fill" id="green-progress" style="width: 64.85%;"></div>
-        </div>
-      </div>
-
-      <!-- Traversable Area -->
-      <div class="metric-tile danger-accent">
-        <div class="metric-tile-label">Accessible Open Ground</div>
-        <div class="metric-tile-val" id="idle-land-percentage">35.15%</div>
-        <div class="metric-progress-bg">
-          <div class="metric-progress-fill danger-fill" id="idle-progress" style="width: 35.15%;"></div>
-        </div>
-      </div>
-
-      <!-- Navigation Diagnostics -->
-      <div class="panel-section-title">
-        <span>⚡</span> Routing Specs
-      </div>
-
-      <div class="studio-status-strip">
-        <span>Algorithm</span>
-        <strong style="color: #00b488;">A* Search</strong>
-      </div>
-
-      <div class="studio-status-strip">
-        <span>Heuristic</span>
-        <span>Octile (8-Way Diagonal)</span>
-      </div>
-
-      <div class="studio-status-strip">
-        <span>Occupancy Grid</span>
-        <span>60 × 60 Downsampled</span>
-      </div>
-
-      <div class="studio-status-strip">
-        <span>Path Status</span>
-        <strong style="color: #38b000;">Cleared (No Blockades)</strong>
-      </div>
-
-      <!-- Insight Box -->
-      <div class="studio-insight-box">
-        Octile heuristic A* expands 11.9x faster than Dijkstra across large survey grids while skirting dense crowns.
-      </div>
-    </aside>
   </div>
-</div>
 
-<script>
-let currentImageSrc = "/images/image.png";
+  <script>
+    let currentImageSrc = "/images/image.png";
 
-function handleFileSelected(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    currentImageSrc = e.target.result;
-    document.getElementById('uploaded-image').src = currentImageSrc;
-    document.getElementById('map-meta').textContent = file.name.substring(0, 16);
-    processImage();
-  };
-  reader.readAsDataURL(file);
-}
-
-function loadSampleImage() {
-  currentImageSrc = "/images/image.png";
-  document.getElementById('uploaded-image').src = currentImageSrc;
-  document.getElementById('map-meta').textContent = "Drone Survey Map";
-  processImage();
-}
-
-function processImage() {
-  const uploadedImage = document.getElementById('uploaded-image');
-  const processedImage = document.getElementById('processed-image');
-  const greenCoverPercentage = document.getElementById('green-cover-percentage');
-  const idleLandPercentage = document.getElementById('idle-land-percentage');
-  const greenProgress = document.getElementById('green-progress');
-  const idleProgress = document.getElementById('idle-progress');
-
-  const img = new Image();
-  img.crossOrigin = "anonymous";
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-
-    canvas.width = img.naturalWidth || img.width;
-    canvas.height = img.naturalHeight || img.height;
-    ctx.drawImage(img, 0, 0);
-
-    let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    let blackPixelCount = 0;
-
-    let totalGreen = 0;
-    for (let i = 1; i < imageData.data.length; i += 4) {
-      totalGreen += imageData.data[i];
-    }
-    const meanGreen = totalGreen / (imageData.data.length / 4);
-
-    for (let i = 0; i < imageData.data.length; i += 4) {
-      let gray = (imageData.data[i + 1]) * 0.587;
-
-      if (gray < meanGreen / 1.5) {
-        gray = 0;
-        blackPixelCount++;
-      } else {
-        gray = 255;
+    function handleFileSelected(event) {
+      const file = event.target.files[0];
+      if (!file) {
+        alert("Please select a file first.");
+        return;
       }
-
-      imageData.data[i] = gray;
-      imageData.data[i + 1] = gray;
-      imageData.data[i + 2] = gray;
-      imageData.data[i + 3] = 255;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        currentImageSrc = e.target.result;
+        document.getElementById('uploaded-image').src = currentImageSrc;
+        document.getElementById('map-meta').textContent = file.name.substring(0, 16);
+        processImage();
+      };
+      reader.readAsDataURL(file);
     }
 
-    ctx.putImageData(imageData, 0, 0);
+    async function loadLiveSatelliteImagery() {
+      const { lat, lon } = (typeof getSelectedCoordinates === "function") 
+        ? getSelectedCoordinates(11.0168, 76.9558) 
+        : { lat: 11.0168, lon: 76.9558 };
+      const locName = localStorage.getItem('selectedLocation') || 'Live Survey Quadrant';
+      const metaEl = document.getElementById('map-meta');
+      if (metaEl) metaEl.textContent = `🛰️ ${locName.substring(0, 16)}`;
 
-    // 1. Build downsampled cost grid
-    const cols = 60;
-    const rows = 60;
-    const costGrid = [];
-    for (let c = 0; c < cols; c++) {
-      costGrid[c] = new Array(rows).fill(1);
+      try {
+        if (window.GreenPulseSatellite) {
+          const res = await window.GreenPulseSatellite.fetchLiveSatelliteImage(lat, lon, 16);
+          currentImageSrc = res.dataUrl;
+          document.getElementById('uploaded-image').src = currentImageSrc;
+          processImage();
+          return;
+        }
+      } catch (e) {
+        console.warn("Satellite fetch error:", e);
+      }
+      loadSampleImage();
     }
 
-    const blockWidth = Math.ceil(canvas.width / cols);
-    const blockHeight = Math.ceil(canvas.height / rows);
+    function loadSampleImage() {
+      currentImageSrc = "/images/image.png";
+      document.getElementById('uploaded-image').src = currentImageSrc;
+      document.getElementById('map-meta').textContent = "Drone Survey Map";
+      processImage();
+    }
 
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        let blackPixels = 0;
-        let totalPixels = 0;
-        const xStart = c * blockWidth;
-        const xEnd = Math.min((c + 1) * blockWidth, canvas.width);
-        const yStart = r * blockHeight;
-        const yEnd = Math.min((r + 1) * blockHeight, canvas.height);
+    function processImage() {
+      const uploadedImage = document.getElementById('uploaded-image');
+      const processedImage = document.getElementById('processed-image');
+      const greenCoverPercentage = document.getElementById('green-cover-percentage');
+      const idleLandPercentage = document.getElementById('idle-land-percentage');
+      const greenProgress = document.getElementById('green-progress');
+      const idleProgress = document.getElementById('idle-progress');
 
-        for (let y = yStart; y < yEnd; y++) {
-          for (let x = xStart; x < xEnd; x++) {
-            const pixelIdx = (y * canvas.width + x) * 4;
-            if (imageData.data[pixelIdx] === 0) {
-              blackPixels++;
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+        ctx.drawImage(img, 0, 0);
+
+        let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        let blackPixelCount = 0;
+
+        let totalGreen = 0;
+        for (let i = 1; i < imageData.data.length; i += 4) {
+          totalGreen += imageData.data[i];
+        }
+        const meanGreen = totalGreen / (imageData.data.length / 4);
+
+        for (let i = 0; i < imageData.data.length; i += 4) {
+          let gray = (imageData.data[i + 1]) * 0.587;
+
+          if (gray < meanGreen / 1.5) {
+            gray = 0;
+            blackPixelCount++;
+          } else {
+            gray = 255;
+          }
+
+          imageData.data[i] = gray;
+          imageData.data[i + 1] = gray;
+          imageData.data[i + 2] = gray;
+          imageData.data[i + 3] = 255;
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+
+        // 1. Build downsampled cost grid
+        const cols = 60;
+        const rows = 60;
+        const costGrid = [];
+        for (let c = 0; c < cols; c++) {
+          costGrid[c] = new Array(rows).fill(1);
+        }
+
+        const blockWidth = Math.ceil(canvas.width / cols);
+        const blockHeight = Math.ceil(canvas.height / rows);
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            let blackPixels = 0;
+            let totalPixels = 0;
+            const xStart = c * blockWidth;
+            const xEnd = Math.min((c + 1) * blockWidth, canvas.width);
+            const yStart = r * blockHeight;
+            const yEnd = Math.min((r + 1) * blockHeight, canvas.height);
+
+            for (let y = yStart; y < yEnd; y++) {
+              for (let x = xStart; x < xEnd; x++) {
+                const pixelIdx = (y * canvas.width + x) * 4;
+                if (imageData.data[pixelIdx] === 0) {
+                  blackPixels++;
+                }
+                totalPixels++;
+              }
             }
-            totalPixels++;
-          }
-        }
-        const blackRatio = totalPixels > 0 ? (blackPixels / totalPixels) : 0;
-        costGrid[c][r] = blackRatio > 0.4 ? 25 : 1;
-      }
-    }
-
-    // 2. A* Pathfinding
-    function getHash(x, y) { return `${x},${y}`; }
-
-    function octileHeuristic(x1, y1, x2, y2) {
-      const dx = Math.abs(x1 - x2);
-      const dy = Math.abs(y1 - y2);
-      return (dx + dy) + (Math.SQRT2 - 2) * Math.min(dx, dy);
-    }
-
-    function findPath(costGrid, startX, startY, endX, endY) {
-      const openSet = [{ x: startX, y: startY }];
-      const closedSet = new Set();
-      const gScore = {};
-      const fScore = {};
-      const cameFrom = {};
-
-      const startHash = getHash(startX, startY);
-      gScore[startHash] = 0;
-      fScore[startHash] = octileHeuristic(startX, startY, endX, endY);
-
-      while (openSet.length > 0) {
-        let lowestIdx = 0;
-        let lowestF = fScore[getHash(openSet[0].x, openSet[0].y)] ?? Infinity;
-        for (let i = 1; i < openSet.length; i++) {
-          const fVal = fScore[getHash(openSet[i].x, openSet[i].y)] ?? Infinity;
-          if (fVal < lowestF) {
-            lowestF = fVal;
-            lowestIdx = i;
+            const blackRatio = totalPixels > 0 ? (blackPixels / totalPixels) : 0;
+            costGrid[c][r] = blackRatio > 0.4 ? 25 : 1;
           }
         }
 
-        const current = openSet.splice(lowestIdx, 1)[0];
-        const currentHash = getHash(current.x, current.y);
+        // 2. A* Pathfinding
+        function getHash(x, y) { return `${x},${y}`; }
 
-        if (current.x === endX && current.y === endY) {
-          const totalPath = [[current.x, current.y]];
-          let currKey = currentHash;
-          while (cameFrom[currKey]) {
-            const prev = cameFrom[currKey];
-            totalPath.unshift([prev.x, prev.y]);
-            currKey = getHash(prev.x, prev.y);
-          }
-          return totalPath;
+        function octileHeuristic(x1, y1, x2, y2) {
+          const dx = Math.abs(x1 - x2);
+          const dy = Math.abs(y1 - y2);
+          return (dx + dy) + (Math.SQRT2 - 2) * Math.min(dx, dy);
         }
 
-        closedSet.add(currentHash);
+        function findPath(costGrid, startX, startY, endX, endY) {
+          const openSet = [{ x: startX, y: startY }];
+          const closedSet = new Set();
+          const gScore = {};
+          const fScore = {};
+          const cameFrom = {};
 
-        const directions = [
-          [-1, 0, 1.0], [1, 0, 1.0], [0, -1, 1.0], [0, 1, 1.0],
-          [-1, -1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [1, 1, Math.SQRT2]
-        ];
+          const startHash = getHash(startX, startY);
+          gScore[startHash] = 0;
+          fScore[startHash] = octileHeuristic(startX, startY, endX, endY);
 
-        for (const [dx, dy, moveDist] of directions) {
-          const nx = current.x + dx;
-          const ny = current.y + dy;
+          while (openSet.length > 0) {
+            let lowestIdx = 0;
+            let lowestF = fScore[getHash(openSet[0].x, openSet[0].y)] ?? Infinity;
+            for (let i = 1; i < openSet.length; i++) {
+              const fVal = fScore[getHash(openSet[i].x, openSet[i].y)] ?? Infinity;
+              if (fVal < lowestF) {
+                lowestF = fVal;
+                lowestIdx = i;
+              }
+            }
 
-          if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) continue;
+            const current = openSet.splice(lowestIdx, 1)[0];
+            const currentHash = getHash(current.x, current.y);
 
-          const neighborHash = getHash(nx, ny);
-          if (closedSet.has(neighborHash)) continue;
+            if (current.x === endX && current.y === endY) {
+              const totalPath = [[current.x, current.y]];
+              let currKey = currentHash;
+              while (cameFrom[currKey]) {
+                const prev = cameFrom[currKey];
+                totalPath.unshift([prev.x, prev.y]);
+                currKey = getHash(prev.x, prev.y);
+              }
+              return totalPath;
+            }
 
-          const stepCost = costGrid[nx][ny] * moveDist;
-          const tentativeG = gScore[currentHash] + stepCost;
+            closedSet.add(currentHash);
 
-          if (tentativeG < (gScore[neighborHash] ?? Infinity)) {
-            cameFrom[neighborHash] = { x: current.x, y: current.y };
-            gScore[neighborHash] = tentativeG;
-            fScore[neighborHash] = tentativeG + octileHeuristic(nx, ny, endX, endY);
+            const directions = [
+              [-1, 0, 1.0], [1, 0, 1.0], [0, -1, 1.0], [0, 1, 1.0],
+              [-1, -1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [1, 1, Math.SQRT2]
+            ];
 
-            if (!openSet.some(item => item.x === nx && item.y === ny)) {
-              openSet.push({ x: nx, y: ny });
+            for (const [dx, dy, moveDist] of directions) {
+              const nx = current.x + dx;
+              const ny = current.y + dy;
+
+              if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) continue;
+
+              const neighborHash = getHash(nx, ny);
+              if (closedSet.has(neighborHash)) continue;
+
+              const stepCost = costGrid[nx][ny] * moveDist;
+              const tentativeG = gScore[currentHash] + stepCost;
+
+              if (tentativeG < (gScore[neighborHash] ?? Infinity)) {
+                cameFrom[neighborHash] = { x: current.x, y: current.y };
+                gScore[neighborHash] = tentativeG;
+                fScore[neighborHash] = tentativeG + octileHeuristic(nx, ny, endX, endY);
+
+                if (!openSet.some(item => item.x === nx && item.y === ny)) {
+                  openSet.push({ x: nx, y: ny });
+                }
+              }
             }
           }
+          return null;
         }
-      }
-      return null;
+
+        const path = findPath(costGrid, 0, 0, cols - 1, rows - 1);
+
+        if (path && path.length > 0) {
+          ctx.beginPath();
+          ctx.strokeStyle = '#e07a5f';
+          ctx.lineWidth = Math.max(Math.round(canvas.width / 120), 4);
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+
+          path.forEach((pt, idx) => {
+            const px = (pt[0] + 0.5) * (canvas.width / cols);
+            const py = (pt[1] + 0.5) * (canvas.height / rows);
+            if (idx === 0) {
+              ctx.moveTo(px, py);
+            } else {
+              ctx.lineTo(px, py);
+            }
+          });
+          ctx.stroke();
+
+          // Start point (Green)
+          ctx.beginPath();
+          ctx.fillStyle = '#00e5a3';
+          ctx.arc((path[0][0] + 0.5) * (canvas.width / cols), (path[0][1] + 0.5) * (canvas.height / rows), ctx.lineWidth * 1.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Goal point (Red)
+          ctx.beginPath();
+          ctx.fillStyle = '#e07a5f';
+          ctx.arc((path[path.length - 1][0] + 0.5) * (canvas.width / cols), (path[path.length - 1][1] + 0.5) * (canvas.height / rows), ctx.lineWidth * 1.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Display the processed image and green cover percentage
+        processedImage.src = canvas.toDataURL();
+        const greenPercentVal = ((blackPixelCount / (canvas.width * canvas.height)) * 100).toFixed(2);
+        const idlePercentVal = (100 - greenPercentVal).toFixed(2);
+
+        greenCoverPercentage.textContent = greenPercentVal + '%';
+        idleLandPercentage.textContent = idlePercentVal + '%';
+      };
+      img.src = currentImageSrc;
     }
 
-    const path = findPath(costGrid, 0, 0, cols - 1, rows - 1);
-
-    if (path && path.length > 0) {
-      ctx.beginPath();
-      ctx.strokeStyle = '#e07a5f';
-      ctx.lineWidth = Math.max(Math.round(canvas.width / 120), 4);
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      path.forEach((pt, idx) => {
-        const px = (pt[0] + 0.5) * (canvas.width / cols);
-        const py = (pt[1] + 0.5) * (canvas.height / rows);
-        if (idx === 0) {
-          ctx.moveTo(px, py);
-        } else {
-          ctx.lineTo(px, py);
-        }
-      });
-      ctx.stroke();
-
-      // Start point (Green)
-      ctx.beginPath();
-      ctx.fillStyle = '#00e5a3';
-      ctx.arc((path[0][0] + 0.5) * (canvas.width / cols), (path[0][1] + 0.5) * (canvas.height / rows), ctx.lineWidth * 1.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Goal point (Red)
-      ctx.beginPath();
-      ctx.fillStyle = '#e07a5f';
-      ctx.arc((path[path.length - 1][0] + 0.5) * (canvas.width / cols), (path[path.length - 1][1] + 0.5) * (canvas.height / rows), ctx.lineWidth * 1.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    processedImage.src = canvas.toDataURL();
-    const greenPercentVal = ((blackPixelCount / (canvas.width * canvas.height)) * 100).toFixed(2);
-    const idlePercentVal = (100 - greenPercentVal).toFixed(2);
-
-    greenCoverPercentage.textContent = greenPercentVal + '%';
-    idleLandPercentage.textContent = idlePercentVal + '%';
-    greenProgress.style.width = greenPercentVal + '%';
-    idleProgress.style.width = idlePercentVal + '%';
-  };
-  img.src = uploadedImage.src;
-}
-
-window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    processImage();
-  }, 200);
-});
-</script>
+    document.addEventListener("DOMContentLoaded", () => {
+      processImage();
+    });
+  </script>
 
 </body>
+
 </html>

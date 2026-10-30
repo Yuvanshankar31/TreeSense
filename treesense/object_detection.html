@@ -5,7 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tree Enumeration (Tree Count)</title>
   <!-- TensorFlow.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js" integrity="sha384-xc4sZTUOM2obsQR75Be0zGbt7Gb6mOVFJN4yBm30Xn0YQLDWIY+yrtFmLmIank6w" crossorigin="anonymous"></script>
+  <!-- Helpers -->
+  <script src="/src/assets/js/coordinates.js"></script>
+  <script src="/src/assets/js/satellite.js"></script>
   <!-- Stylesheets -->
   <link rel="stylesheet" href="/src/assets/css/styles.css">
   <style>
@@ -37,11 +40,15 @@
         <span id="model-status-text">Loading Model...</span>
       </div>
 
+      <button class="btn-studio-ghost" id="btn-live-satellite" onclick="loadLiveSatelliteImagery()" title="Fetch satellite imagery for selected live location">
+        <span>🛰️</span> Live Satellite View
+      </button>
+
       <input type="file" id="uploadInput" accept="image/*" style="display: none;">
       <button class="btn-studio-ghost" onclick="document.getElementById('uploadInput').click()">
         <span>📁</span> Browse Imagery
       </button>
-      <button class="btn-studio-ghost" onclick="autoRunDefaultImage()">
+      <button class="btn-studio-ghost" onclick="loadDemoImage()">
         <span>🖼️</span> Demo Drone View
       </button>
     </div>
@@ -59,7 +66,7 @@
           <span id="file-name" style="font-size: 11px; color: var(--text-muted); font-weight: 600;">image.png</span>
         </div>
         <div class="viewer-canvas-stage">
-          <img id="uploaded-image" src="/images/treeicon.png" alt="Uploaded Forest Image">
+          <img id="uploaded-image" src="/images/image.png" alt="Uploaded Forest Image">
         </div>
       </div>
 
@@ -76,7 +83,7 @@
       </div>
     </div>
 
-    <!-- Right Analytics & Metrics Panel (No scroll needed, fits neatly) -->
+    <!-- Right Analytics & Metrics Panel -->
     <aside class="studio-metrics-panel">
       <div class="panel-section-title">
         <span>📊</span> Enumeration Metrics
@@ -104,7 +111,7 @@
 
       <div class="studio-status-strip">
         <span>Backend Accelerator</span>
-        <strong id="backend-label" style="color: #00b488;">WebGL GPU</strong>
+        <strong id="backend-label" style="color: #00b488;">WebGL GPU (Optimized)</strong>
       </div>
 
       <div class="studio-status-strip">
@@ -118,7 +125,7 @@
       </div>
 
       <!-- Ecological Stand Density Insight -->
-      <div class="studio-insight-box">
+      <div class="studio-insight-box" id="insight-box">
         Automated tree bounding box enumeration minimizes manual forestry surveying time from days to milliseconds.
       </div>
     </aside>
@@ -131,38 +138,51 @@
   const yolo_classes = ['tree'];
   
   let model = null;
+  let isProcessing = false;
+  let currentLoadedImage = null;
+  let sharedCanvas = null;
+
   const input = document.getElementById("uploadInput");
   const uploadedImg = document.getElementById("uploaded-image");
+  const statusDiv = document.getElementById("model-status");
+  const statusText = document.getElementById("model-status-text");
+  const backendLabel = document.getElementById("backend-label");
+  const fileNameLabel = document.getElementById("file-name");
 
-  // Preload the model immediately on load
+  // Preload and accelerate model on load
   document.addEventListener("DOMContentLoaded", async () => {
-    const statusDiv = document.getElementById("model-status");
-    const uploadCard = document.getElementById("upload-card");
-    
     try {
-      console.log("Setting TensorFlow.js backend to WebGL...");
+      console.log("Configuring GPU acceleration flags...");
+      try {
+        tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
+        tf.env().set('WEBGL_PACK', true);
+        tf.env().set('WEBGL_VERSION', 2);
+        tf.env().set('WEBGL_DELETE_TEXTURE_THRESHOLD', 0);
+      } catch (e) {
+        console.warn("Could not set advanced WebGL flags:", e);
+      }
+
       await tf.setBackend('webgl');
       await tf.ready();
       
-      console.log("Loading local TensorFlow.js model...");
+      console.log("Loading TensorFlow.js model...");
       model = await tf.loadGraphModel(MODEL_JSON_URL);
       console.log("Model loaded successfully!");
       
-      // Pre-warm the model to compile shaders
-      console.log("Pre-warming model...");
+      // Pre-warm the model and force GPU shader compilation immediately
+      console.log("Pre-warming model and compiling GPU shaders...");
       tf.tidy(() => {
         const dummy = tf.zeros([1, 640, 640, 3]);
-        model.predict(dummy);
+        const out = model.predict(dummy);
+        out.dataSync(); // Forces shader compilation now, preventing lag on first real inference
       });
-      console.log("Model pre-warmed!");
+      console.log("GPU shaders pre-warmed!");
 
-      const statusText = document.getElementById("model-status-text");
       if (statusText) statusText.textContent = "YOLOv8 Active (WebGL GPU)";
-      const backendLabel = document.getElementById("backend-label");
-      if (backendLabel) backendLabel.textContent = "WebGL GPU";
-      
-      // Auto-run on the copied test image
-      await autoRunDefaultImage();
+      if (backendLabel) backendLabel.textContent = "WebGL GPU (High Speed)";
+
+      // Automatically load live satellite imagery for selected location, or demo view
+      await autoLoadInitialView();
     } catch (error) {
       console.warn("Failed to load model on WebGL, trying CPU fallback...", error);
       try {
@@ -171,15 +191,12 @@
         
         model = await tf.loadGraphModel(MODEL_JSON_URL);
         console.log("Model loaded on CPU!");
-        const statusText = document.getElementById("model-status-text");
-        if (statusText) statusText.textContent = "YOLOv8 Active (CPU Fallback)";
-        const backendLabel = document.getElementById("backend-label");
+        if (statusText) statusText.textContent = "YOLOv8 Active (CPU)";
         if (backendLabel) backendLabel.textContent = "CPU Fallback";
         
-        await autoRunDefaultImage();
+        await autoLoadInitialView();
       } catch (fallbackError) {
         console.error("Critical error: Failed to load model on both WebGL and CPU.", fallbackError);
-        const statusText = document.getElementById("model-status-text");
         if (statusText) {
           statusText.textContent = "Model Error";
           statusDiv.style.background = "rgba(220, 53, 69, 0.2)";
@@ -189,96 +206,148 @@
     }
   });
 
-  // Handle manual file selection
+  // Decide whether to load live satellite imagery or sample
+  async function autoLoadInitialView() {
+    const lat = localStorage.getItem('selectedLatitude');
+    const lon = localStorage.getItem('selectedLongitude');
+    if (lat && lon) {
+      await loadLiveSatelliteImagery();
+    } else {
+      await loadDemoImage();
+    }
+  }
+
+  // Fetch and display live satellite imagery for the selected or GPS coordinates
+  async function loadLiveSatelliteImagery() {
+    if (!model) return;
+    const { lat, lon } = (typeof getSelectedCoordinates === "function") 
+      ? getSelectedCoordinates(11.0168, 76.9558) 
+      : { lat: 11.0168, lon: 76.9558 };
+    
+    const locName = localStorage.getItem('selectedLocation') || 'Live Survey Zone';
+    if (fileNameLabel) {
+      fileNameLabel.textContent = `🛰️ Fetching Live Satellite: ${locName.substring(0, 16)} (${lat.toFixed(2)}°, ${lon.toFixed(2)}°)...`;
+    }
+
+    try {
+      if (window.GreenPulseSatellite) {
+        const result = await window.GreenPulseSatellite.fetchLiveSatelliteImage(lat, lon, 16);
+        uploadedImg.src = result.dataUrl;
+        if (fileNameLabel) {
+          fileNameLabel.textContent = `📍 Live Satellite: ${locName.substring(0, 16)} (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`;
+        }
+        await processAndDrawImage(result.img);
+        return;
+      }
+    } catch (err) {
+      console.warn("Could not fetch live satellite image, using demo aerial view:", err);
+    }
+
+    // Fallback to sample image
+    await loadDemoImage();
+  }
+
+  // Load local high-res demo image
+  async function loadDemoImage() {
+    try {
+      const imgPath = "/images/image.png";
+      uploadedImg.src = imgPath;
+      if (fileNameLabel) fileNameLabel.textContent = "Sample Aerial Survey (image.png)";
+      
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.onload = async () => {
+        await processAndDrawImage(img);
+      };
+      img.src = imgPath;
+    } catch (error) {
+      console.warn("Failed to load demo image:", error);
+    }
+  }
+
+  // Handle manual file selection from disk
   input.addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file) return;
+
+    if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
+      alert("Please select a supported image file.");
+      input.value = "";
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      alert("Please select an image smaller than 15 MB.");
+      input.value = "";
+      return;
+    }
     
-    document.getElementById("file-name").textContent = `Selected: ${file.name}`;
-    uploadedImg.src = URL.createObjectURL(file);
-    await processAndDraw(file);
+    const url = URL.createObjectURL(file);
+    uploadedImg.src = url;
+    if (fileNameLabel) fileNameLabel.textContent = `Local File: ${file.name}`;
+
+    const img = new Image();
+    img.onload = async () => {
+      await processAndDrawImage(img);
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
   });
 
-  // Run model on the default test image
-  async function autoRunDefaultImage() {
-    try {
-      const imgPath = "/images/image.png";
-      const response = await fetch(imgPath);
-      if (!response.ok) {
-        throw new Error(`HTTP error fetching ${imgPath}, status ${response.status}`);
-      }
-      const blob = await response.blob();
-      
-      uploadedImg.src = imgPath;
-      await processAndDraw(blob);
-    } catch (error) {
-      console.warn("Failed to auto-run default image:", error);
+  // Listen for location changes from parent predict.html or index.html
+  window.addEventListener("storage", (e) => {
+    if (e.key === "selectedLatitude" || e.key === "selectedLongitude" || e.key === "selectedLocation") {
+      loadLiveSatelliteImagery();
     }
-  }
+  });
 
-  // Preprocess, predict, and render
-  async function processAndDraw(fileOrBlob) {
-    const startTime = performance.now();
-    try {
-      const [inputTensor, imgWidth, imgHeight] = await prepare_input(fileOrBlob);
-      const output = await run_model(inputTensor);
-      const boxes = process_output(output, imgWidth, imgHeight);
-      draw_image_and_boxes(fileOrBlob, boxes);
-      
-      const duration = Math.round(performance.now() - startTime);
-      document.getElementById("inferenceTime").textContent = `${duration} ms`;
-    } catch (err) {
-      console.error("Error during image processing:", err);
-      alert("Error processing the image. Please try another image.");
+  window.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "greenpulse-location-update") {
+      loadLiveSatelliteImagery();
     }
-  }
+  });
 
-  // Preprocess image to [1, 640, 640, 3] layout using tf.browser.fromPixels
-  async function prepare_input(fileOrBlob) {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.src = URL.createObjectURL(fileOrBlob);
-      img.onload = () => {
-        const img_width = img.width;
-        const img_height = img.height;
-        
-        // Render image onto temporary 640x640 canvas
-        const canvas = document.createElement("canvas");
-        canvas.width = 640;
-        canvas.height = 640;
-        const context = canvas.getContext("2d");
-        context.drawImage(img, 0, 0, 640, 640);
-        
-        // Generate normalized WebGL tensor in HWC format
-        const tensor = tf.tidy(() => {
-          return tf.browser.fromPixels(canvas)
-            .toFloat()
-            .div(255.0)
-            .expandDims(0); // Shape: [1, 640, 640, 3]
-        });
-        
-        resolve([tensor, img_width, img_height]);
-      };
-      img.onerror = (err) => reject(err);
+  window.addEventListener("greenpulse-location-changed", () => {
+    loadLiveSatelliteImagery();
+  });
+
+  // Preprocess image directly from loaded HTMLImageElement to [1, 640, 640, 3] layout
+  function prepare_input_fast(img) {
+    if (!sharedCanvas) {
+      sharedCanvas = document.createElement("canvas");
+      sharedCanvas.width = 640;
+      sharedCanvas.height = 640;
+    }
+    const context = sharedCanvas.getContext("2d", { willReadFrequently: false });
+    context.drawImage(img, 0, 0, 640, 640);
+
+    const tensor = tf.tidy(() => {
+      return tf.browser.fromPixels(sharedCanvas)
+        .toFloat()
+        .div(255.0)
+        .expandDims(0); // Shape: [1, 640, 640, 3]
     });
+
+    const imgWidth = img.naturalWidth || img.width || 640;
+    const imgHeight = img.naturalHeight || img.height || 640;
+    return [tensor, imgWidth, imgHeight];
   }
 
-  // Execute predictions and free tensor memories
-  async function run_model(inputTensor) {
+  // Execute predictions and free GPU tensor memories
+  async function run_model_fast(inputTensor) {
     if (!model) throw new Error("TensorFlow.js model not ready");
-    
-    const outputTensor = model.predict(inputTensor);
-    const outputData = await outputTensor.data();
-    
-    // Dispose input and output tensors to prevent GPU memory leaks
-    tf.dispose([inputTensor, outputTensor]);
-    
-    return outputData;
+
+    let outputTensor = null;
+    try {
+      outputTensor = model.predict(inputTensor);
+      return await outputTensor.data();
+    } finally {
+      tf.dispose([inputTensor, outputTensor]);
+    }
   }
 
-  // Parse YOLOv8 output, apply confidence threshold and NMS
-  function process_output(output, img_width, img_height) {
-    let boxes = [];
+  // Optimized O(N) YOLOv8 output parser with typed suppression array
+  function process_output_fast(output, img_width, img_height) {
+    const rawBoxes = [];
     const num_classes = Math.round(output.length / 8400) - 4;
 
     for (let index = 0; index < 8400; index++) {
@@ -301,7 +370,7 @@
         continue;
       }
 
-      const label = yolo_classes[class_id] || `class_${class_id}`;
+      const label = yolo_classes[class_id] || `tree`;
       const xc = output[index];
       const yc = output[8400 + index];
       const w = output[2 * 8400 + index];
@@ -313,87 +382,113 @@
       const x2 = (xc + w / 2) / 640 * img_width;
       const y2 = (yc + h / 2) / 640 * img_height;
 
-      boxes.push([x1, y1, x2, y2, label, prob]);
+      rawBoxes.push([x1, y1, x2, y2, label, prob]);
     }
 
     // Sort by confidence descending
-    boxes.sort((a, b) => b[5] - a[5]);
+    rawBoxes.sort((a, b) => b[5] - a[5]);
 
-    // Apply Non-Maximum Suppression (NMS)
+    // Apply fast Non-Maximum Suppression (NMS) using boolean mask
+    const maxCandidates = Math.min(rawBoxes.length, 600);
+    const suppressed = new Uint8Array(maxCandidates);
     const result = [];
-    while (boxes.length > 0) {
-      const best = boxes[0];
-      result.push(best);
-      boxes = boxes.filter(box => iou(best, box) < 0.45);
+
+    for (let i = 0; i < maxCandidates; i++) {
+      if (suppressed[i]) continue;
+      const b1 = rawBoxes[i];
+      result.push(b1);
+      if (result.length >= 350) break; // Limit to top 350 dense crowns
+
+      for (let j = i + 1; j < maxCandidates; j++) {
+        if (!suppressed[j] && iou(b1, rawBoxes[j]) >= 0.45) {
+          suppressed[j] = 1;
+        }
+      }
     }
     return result;
   }
 
-  // IoU calculations
+  // Fast Intersection over Union (IoU)
   function iou(box1, box2) {
-    return intersection(box1, box2) / union(box1, box2);
-  }
-
-  function union(box1, box2) {
-    const [b1_x1, b1_y1, b1_x2, b1_y2] = box1;
-    const [b2_x1, b2_y1, b2_x2, b2_y2] = box2;
-    const area1 = (b1_x2 - b1_x1) * (b1_y2 - b1_y1);
-    const area2 = (b2_x2 - b2_x1) * (b2_y2 - b2_y1);
-    return area1 + area2 - intersection(box1, box2);
-  }
-
-  function intersection(box1, box2) {
-    const [b1_x1, b1_y1, b1_x2, b1_y2] = box1;
-    const [b2_x1, b2_y1, b2_x2, b2_y2] = box2;
-    const x1 = Math.max(b1_x1, b2_x1);
-    const y1 = Math.max(b1_y1, b2_y1);
-    const x2 = Math.min(b1_x2, b2_x2);
-    const y2 = Math.min(b1_y2, b2_y2);
+    const x1 = Math.max(box1[0], box2[0]);
+    const y1 = Math.max(box1[1], box2[1]);
+    const x2 = Math.min(box1[2], box2[2]);
+    const y2 = Math.min(box1[3], box2[3]);
     if (x2 <= x1 || y2 <= y1) return 0;
-    return (x2 - x1) * (y2 - y1);
+
+    const inter = (x2 - x1) * (y2 - y1);
+    const area1 = (box1[2] - box1[0]) * (box1[3] - box1[1]);
+    const area2 = (box2[2] - box2[0]) * (box2[3] - box2[1]);
+    return inter / (area1 + area2 - inter);
   }
 
-  // Draw overlay canvas
-  function draw_image_and_boxes(fileOrBlob, boxes) {
-    const img = new Image();
-    img.src = URL.createObjectURL(fileOrBlob);
-    img.onload = () => {
-      const canvas = document.getElementById("detection-canvas");
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0);
-      
-      // Scale lines and fonts dynamically based on image resolution
-      const strokeSize = Math.max(2, Math.round(img.width / 400));
-      const fontSize = Math.max(12, Math.round(img.width / 60));
-      
-      ctx.strokeStyle = "#28a745";
-      ctx.lineWidth = strokeSize;
-      ctx.font = `bold ${fontSize}px 'Outfit', sans-serif`;
-      ctx.textBaseline = "top";
+  // Preprocess, predict, and render in a single streamlined pipeline
+  async function processAndDrawImage(img) {
+    if (isProcessing) return;
+    isProcessing = true;
+    currentLoadedImage = img;
 
-      boxes.forEach(([x1, y1, x2, y2, label, prob]) => {
-        // Draw bounding box rectangle
-        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
-        
-        // Draw label background tag
-        ctx.fillStyle = "rgba(40, 167, 69, 0.85)";
-        const text = `${label} (${(prob * 100).toFixed(0)}%)`;
-        const textMetrics = ctx.measureText(text);
-        const textWidth = textMetrics.width;
-        const textHeight = fontSize;
-        
-        ctx.fillRect(x1, y1, textWidth + 10, textHeight + 6);
-        
-        // Draw text label
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(text, x1 + 5, y1 + 3);
-      });
+    const startTime = performance.now();
+    try {
+      const [inputTensor, imgWidth, imgHeight] = prepare_input_fast(img);
+      const output = await run_model_fast(inputTensor);
+      const boxes = process_output_fast(output, imgWidth, imgHeight);
+      
+      draw_overlay_fast(img, boxes);
+      
+      const duration = Math.round(performance.now() - startTime);
+      const latencyEl = document.getElementById("inferenceTime");
+      if (latencyEl) latencyEl.textContent = `${duration} ms`;
 
-      // Update tree count metric in UI
-      document.getElementById("objectCount").textContent = boxes.length;
-    };
+      const countEl = document.getElementById("objectCount");
+      if (countEl) countEl.textContent = boxes.length;
+
+      const progressEl = document.getElementById("count-progress");
+      if (progressEl) {
+        const fillPct = Math.min(100, Math.round((boxes.length / 150) * 100));
+        progressEl.style.width = `${fillPct}%`;
+      }
+    } catch (err) {
+      console.error("Error during image processing:", err);
+    } finally {
+      isProcessing = false;
+    }
+  }
+
+  // Render high-speed overlay onto canvas
+  function draw_overlay_fast(img, boxes) {
+    const canvas = document.getElementById("detection-canvas");
+    const width = img.naturalWidth || img.width || 640;
+    const height = img.naturalHeight || img.height || 640;
+
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    
+    ctx.drawImage(img, 0, 0, width, height);
+    
+    const strokeSize = Math.max(2, Math.round(width / 400));
+    const fontSize = Math.max(11, Math.round(width / 65));
+    
+    ctx.strokeStyle = "#00e5a3";
+    ctx.lineWidth = strokeSize;
+    ctx.font = `bold ${fontSize}px 'Outfit', sans-serif`;
+    ctx.textBaseline = "top";
+
+    boxes.forEach(([x1, y1, x2, y2, label, prob]) => {
+      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+      
+      ctx.fillStyle = "rgba(0, 180, 136, 0.85)";
+      const text = `${label} ${(prob * 100).toFixed(0)}%`;
+      const textMetrics = ctx.measureText(text);
+      const textWidth = textMetrics.width;
+      const textHeight = fontSize + 4;
+      
+      ctx.fillRect(x1, y1, textWidth + 8, textHeight);
+      
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(text, x1 + 4, y1 + 2);
+    });
   }
 </script>
 
