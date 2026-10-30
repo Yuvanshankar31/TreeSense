@@ -531,6 +531,75 @@
     return result;
   }
 
+  // Strict Non-Maximum Suppression: eliminates overlapping boxes completely
+  function applyStrictNMS(boxes, iouThreshold = 0.20, maxBoxes = 90) {
+    if (!boxes || boxes.length === 0) return [];
+
+    // Sort descending by confidence score
+    boxes.sort((a, b) => b[5] - a[5]);
+
+    const kept = [];
+    const suppressed = new Uint8Array(boxes.length);
+
+    for (let i = 0; i < boxes.length; i++) {
+      if (suppressed[i]) continue;
+      const b1 = boxes[i];
+      kept.push(b1);
+      if (kept.length >= maxBoxes) break;
+
+      const x1_a = b1[0], y1_a = b1[1], x2_a = b1[2], y2_a = b1[3];
+      const areaA = (x2_a - x1_a) * (y2_a - y1_a);
+      const cxA = (x1_a + x2_a) * 0.5;
+      const cyA = (y1_a + y2_a) * 0.5;
+
+      for (let j = i + 1; j < boxes.length; j++) {
+        if (suppressed[j]) continue;
+        const b2 = boxes[j];
+        const x1_b = b2[0], y1_b = b2[1], x2_b = b2[2], y2_b = b2[3];
+
+        const cxB = (x1_b + x2_b) * 0.5;
+        const cyB = (y1_b + y2_b) * 0.5;
+
+        // Condition 1: Center containment (center of one box inside the other)
+        if (cxB >= x1_a && cxB <= x2_a && cyB >= y1_a && cyB <= y2_a) {
+          suppressed[j] = 1;
+          continue;
+        }
+        if (cxA >= x1_b && cxA <= x2_b && cyA >= y1_b && cyA <= y2_b) {
+          suppressed[j] = 1;
+          continue;
+        }
+
+        // Condition 2: Centers too close (within 70% of box diameter)
+        const minDist = Math.min(x2_a - x1_a, x2_b - x1_b) * 0.70;
+        const dx = cxA - cxB;
+        const dy = cyA - cyB;
+        if (dx * dx + dy * dy < minDist * minDist) {
+          suppressed[j] = 1;
+          continue;
+        }
+
+        // Condition 3: Intersection over Union (IoU) and containment ratio
+        const ix1 = Math.max(x1_a, x1_b);
+        const iy1 = Math.max(y1_a, y1_b);
+        const ix2 = Math.min(x2_a, x2_b);
+        const iy2 = Math.min(y2_a, y2_b);
+
+        if (ix2 > ix1 && iy2 > iy1) {
+          const inter = (ix2 - ix1) * (iy2 - iy1);
+          const areaB = (x2_b - x1_b) * (y2_b - y1_b);
+          const iou = inter / (areaA + areaB - inter);
+          const containment = inter / Math.min(areaA, areaB);
+
+          if (iou >= iouThreshold || containment > 0.35) {
+            suppressed[j] = 1;
+          }
+        }
+      }
+    }
+    return kept;
+  }
+
   // Multi-spectral canopy crown detector (accurately detects trees in satellite imagery and groves)
   function augmentWithCanopyCrowns(img, existingBoxes, imgWidth, imgHeight) {
     if (!sharedCanvas) {
@@ -548,7 +617,7 @@
 
     // Fast Excess Green (ExG) index map
     const exg = new Float32Array(640 * 640);
-    const minThreshold = Math.max(5, Math.round(confidenceThreshold * 65));
+    const minThreshold = Math.max(12, Math.round(confidenceThreshold * 110));
 
     for (let y = 0; y < 640; y++) {
       const row = y * 640;
@@ -564,11 +633,11 @@
       }
     }
 
-    // Dynamic block size and radius adapted to zoom scale and image dimensions
+    // Dynamic block size and radius calibrated to natural tree spacing
     const isDronePhoto = imgWidth > 900;
-    const blockSize = isDronePhoto ? 12 : (currentZoom === 18 ? 9 : 7);
-    const radius = isDronePhoto ? 8 : (currentZoom === 18 ? 6 : 5);
-    const maxCrownR = isDronePhoto ? 28 : (currentZoom === 18 ? 20 : 15);
+    const blockSize = isDronePhoto ? 24 : (currentZoom === 18 ? 18 : (currentZoom === 17 ? 14 : 11));
+    const radius = isDronePhoto ? 16 : (currentZoom === 18 ? 12 : (currentZoom === 17 ? 9 : 7));
+    const maxCrownR = isDronePhoto ? 35 : (currentZoom === 18 ? 24 : (currentZoom === 17 ? 18 : 14));
     
     const newCrowns = [];
     const crownCenters = [];
@@ -576,7 +645,7 @@
     const cols = Math.floor(640 / blockSize);
     const rows = Math.floor(640 / blockSize);
 
-    // Block-argmax peak detection: guarantees zero skipped peaks from aliasing
+    // Block-argmax peak detection: identifies prominent crown apexes
     for (let by = 0; by < rows; by++) {
       for (let bx = 0; bx < cols; bx++) {
         let maxVal = -1;
@@ -600,7 +669,7 @@
           }
         }
 
-        if (maxVal < minThreshold * 1.15) continue;
+        if (maxVal < minThreshold * 1.30) continue;
 
         // Verify if (maxX, maxY) is a true local maximum in its spatial neighborhood
         let isPeak = true;
@@ -622,26 +691,23 @@
         }
 
         if (isPeak) {
-          const px = maxX * scaleX;
-          const py = maxY * scaleY;
+          // Peak prominence check: apex must be distinctly higher than surrounding canopy
+          const eTop = exg[Math.max(0, maxY - radius) * 640 + maxX];
+          const eBot = exg[Math.min(639, maxY + radius) * 640 + maxX];
+          const eLeft = exg[maxY * 640 + Math.max(0, maxX - radius)];
+          const eRight = exg[maxY * 640 + Math.min(639, maxX + radius)];
+          const edgeAvg = (eTop + eBot + eLeft + eRight) * 0.25;
 
-          // Check if already covered by an existing YOLO detection
-          let coveredByYolo = false;
-          for (let b = 0; b < existingBoxes.length; b++) {
-            const [ex1, ey1, ex2, ey2] = existingBoxes[b];
-            if (px >= ex1 && px <= ex2 && py >= ey1 && py <= ey2) {
-              coveredByYolo = true;
-              break;
-            }
-          }
-          if (coveredByYolo) continue;
+          // If the peak is not higher than its boundary by at least 5 units, it's uniform foliage, not a tree
+          if (maxVal - edgeAvg < 5 || edgeAvg > maxVal * 0.88) continue;
 
-          // Spatial non-maximum suppression: prevent duplicate adjacent crowns
+          // Prevent crown centers from being too close
           let tooClose = false;
+          const minCenterDistSq = (radius * 1.5) * (radius * 1.5);
           for (let c = 0; c < crownCenters.length; c++) {
             const dx = maxX - crownCenters[c].x;
             const dy = maxY - crownCenters[c].y;
-            if (dx * dx + dy * dy < (radius * 1.35) * (radius * 1.35)) {
+            if (dx * dx + dy * dy < minCenterDistSq) {
               tooClose = true;
               break;
             }
@@ -655,7 +721,7 @@
             const e2 = exg[maxY * 640 + Math.max(0, maxX - crownR)];
             const e3 = exg[Math.min(639, maxY + crownR) * 640 + maxX];
             const e4 = exg[Math.max(0, maxY - crownR) * 640 + maxX];
-            if ((e1 + e2 + e3 + e4) / 4 < maxVal * 0.40) break;
+            if ((e1 + e2 + e3 + e4) * 0.25 < maxVal * 0.50) break;
             crownR += 2;
           }
 
@@ -666,13 +732,15 @@
           const bx2 = Math.min(imgWidth, (maxX + crownR) * scaleX);
           const by2 = Math.min(imgHeight, (maxY + crownR) * scaleY);
 
-          const conf = Math.min(0.89, 0.42 + (maxVal / 170));
+          const conf = Math.min(0.89, 0.45 + (maxVal / 170));
           newCrowns.push([bx1, by1, bx2, by2, "tree", parseFloat(conf.toFixed(2))]);
         }
       }
     }
 
-    return existingBoxes.concat(newCrowns);
+    // Merge existing YOLO boxes and detected crowns through Strict NMS (zero heavy overlaps)
+    const allCandidates = (existingBoxes || []).concat(newCrowns);
+    return applyStrictNMS(allCandidates, 0.20, isDronePhoto ? 55 : 85);
   }
 
   // Preprocess, predict, and render in a dual-phase instant pipeline
@@ -746,8 +814,8 @@
     
     ctx.drawImage(img, 0, 0, width, height);
     
-    const strokeSize = Math.max(2, Math.round(width / 400));
-    const fontSize = Math.max(10, Math.round(width / 70));
+    const strokeSize = Math.max(2, Math.round(width / 450));
+    const fontSize = Math.max(10, Math.round(width / 75));
     
     ctx.strokeStyle = "#00e5a3";
     ctx.lineWidth = strokeSize;
@@ -755,18 +823,21 @@
     ctx.textBaseline = "top";
 
     boxes.forEach(([x1, y1, x2, y2, label, prob]) => {
-      ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+      const boxW = x2 - x1;
+      const boxH = y2 - y1;
+      ctx.strokeRect(x1, y1, boxW, boxH);
       
-      ctx.fillStyle = "rgba(0, 180, 136, 0.85)";
+      ctx.fillStyle = "rgba(0, 180, 136, 0.90)";
       const text = `${label} ${(prob * 100).toFixed(0)}%`;
       const textMetrics = ctx.measureText(text);
       const textWidth = textMetrics.width;
       const textHeight = fontSize + 4;
       
-      ctx.fillRect(x1, y1, textWidth + 6, textHeight);
+      const tagY = y1 > textHeight + 2 ? y1 - textHeight : y1;
+      ctx.fillRect(x1, tagY, textWidth + 6, textHeight);
       
       ctx.fillStyle = "#ffffff";
-      ctx.fillText(text, x1 + 3, y1 + 2);
+      ctx.fillText(text, x1 + 3, tagY + 2);
     });
   }
 </script>
