@@ -7,6 +7,8 @@
   <!-- TensorFlow.js Core & Backends -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.20.0/dist/tf-backend-wasm.min.js"></script>
+  <!-- Global Location & Satellite Stigmatizer -->
+  <script src="/src/assets/js/script.js"></script>
   <!-- Stylesheets -->
   <link rel="stylesheet" href="/src/assets/css/styles.css">
   <style>
@@ -38,6 +40,10 @@
         <span id="model-status-text">Loading Model...</span>
       </div>
 
+      <button class="btn-studio-ghost" id="btn-live-location" onclick="detectAndLoadLiveLocation()" style="color: #00e5a3; border-color: rgba(0, 229, 163, 0.4);" title="Detect your exact live location and load its satellite imagery">
+        <span>📍</span> My Live Location
+      </button>
+
       <input type="file" id="uploadInput" accept="image/*" style="display: none;">
       <button class="btn-studio-ghost" onclick="document.getElementById('uploadInput').click()">
         <span>📁</span> Browse Imagery
@@ -54,7 +60,7 @@
           <div class="viewer-tag">
             <span>📷</span> Original Satellite Image
           </div>
-          <span id="file-name" style="font-size: 11px; color: var(--text-muted); font-weight: 600;">image.png</span>
+          <span id="file-name" style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Detecting location...</span>
         </div>
         <div class="viewer-canvas-stage">
           <img id="uploaded-image" src="/images/image.png" alt="Uploaded Forest Image">
@@ -142,12 +148,10 @@
   // Preload and accelerate model on load
   document.addEventListener("DOMContentLoaded", async () => {
     try {
-      // 1. Enable production mode (disables slow NaN checks and assertions)
       if (typeof tf.enableProdMode === 'function') {
         tf.enableProdMode();
       }
 
-      // 2. Select fastest backend available (WebGL -> WASM SIMD -> CPU)
       let activeBackend = 'webgl';
       try {
         await tf.setBackend('webgl');
@@ -174,12 +178,10 @@
         backendLabel.style.color = backendName === 'webgl' ? '#00b488' : '#e9c46a';
       }
 
-      // 3. Load GraphModel
       console.log("Loading TensorFlow.js model...");
       model = await tf.loadGraphModel(MODEL_JSON_URL);
       console.log("Model loaded successfully!");
       
-      // 4. Safe Warm-Up
       try {
         const dummy = tf.zeros([1, 640, 640, 3]);
         const out = model.execute(dummy);
@@ -195,7 +197,8 @@
         statusDiv.style.color = "#00e5a3";
       }
 
-      await loadDemoImage();
+      // Automatically load exact live location
+      await autoLoadInitialLocation();
     } catch (error) {
       console.error("Critical error loading model:", error);
       if (statusText) {
@@ -206,7 +209,93 @@
     }
   });
 
-  // Load local high-res demo image
+  // Automatically load live location or saved location
+  async function autoLoadInitialLocation() {
+    const savedLat = localStorage.getItem('selectedLatitude');
+    const savedLon = localStorage.getItem('selectedLongitude');
+    const savedLoc = localStorage.getItem('selectedLocation');
+    if (savedLat && savedLon && savedLoc) {
+      await loadSatelliteForCoordinates(parseFloat(savedLat), parseFloat(savedLon), savedLoc);
+    } else {
+      await detectAndLoadLiveLocation();
+    }
+  }
+
+  // Trigger GPS / IP live location detection and stitch exact satellite tiles
+  async function detectAndLoadLiveLocation() {
+    const btn = document.getElementById("btn-live-location");
+    if (btn) btn.innerHTML = `<span>⏳</span> Locating...`;
+    try {
+      if (window.GreenPulseLocation) {
+        const res = await window.GreenPulseLocation.retrieveLiveLocation();
+        const lat = parseFloat(res.lat);
+        const lon = parseFloat(res.lon);
+        await loadSatelliteForCoordinates(lat, lon, res.label);
+        if (btn) btn.innerHTML = `<span>✅</span> ${res.label.substring(0, 14)}`;
+        return;
+      }
+    } catch (err) {
+      console.error("Live location error:", err);
+      if (btn) btn.innerHTML = `<span>⚠️</span> Location Failed`;
+    } finally {
+      setTimeout(() => {
+        if (btn) btn.innerHTML = `<span>📍</span> My Live Location`;
+      }, 3500);
+    }
+    await loadDemoImage();
+  }
+
+  // Fetch and stitch real satellite imagery for coordinates and run detection
+  function loadSatelliteForCoordinates(lat, lon, label) {
+    return new Promise((resolve) => {
+      if (fileNameLabel) {
+        fileNameLabel.textContent = `🛰️ Loading Satellite: ${label} (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)...`;
+      }
+      if (window.GreenPulseLocation && typeof window.GreenPulseLocation.stitchSatelliteForCoords === 'function') {
+        window.GreenPulseLocation.stitchSatelliteForCoords(lat, lon, (canvas) => {
+          const dataUrl = canvas.toDataURL();
+          uploadedImg.src = dataUrl;
+          if (fileNameLabel) {
+            fileNameLabel.textContent = `📍 Live Location: ${label} (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`;
+          }
+          const img = new Image();
+          img.onload = async () => {
+            await processAndDrawImage(img);
+            resolve();
+          };
+          img.src = dataUrl;
+        });
+      } else {
+        loadDemoImage().then(resolve);
+      }
+    });
+  }
+
+  // Cross-window and event listeners for real-time live location updates
+  window.addEventListener("greenpulse-location-changed", (e) => {
+    if (e.detail && e.detail.lat && e.detail.lon) {
+      loadSatelliteForCoordinates(parseFloat(e.detail.lat), parseFloat(e.detail.lon), e.detail.label || 'Live Location');
+    }
+  });
+
+  window.addEventListener("storage", (e) => {
+    if (e.key === "selectedLatitude" || e.key === "selectedLongitude") {
+      const lat = parseFloat(localStorage.getItem('selectedLatitude'));
+      const lon = parseFloat(localStorage.getItem('selectedLongitude'));
+      const loc = localStorage.getItem('selectedLocation') || 'Live Location';
+      if (!isNaN(lat) && !isNaN(lon)) {
+        loadSatelliteForCoordinates(lat, lon, loc);
+      }
+    }
+  });
+
+  window.addEventListener("message", (e) => {
+    if (e.data && e.data.type === "greenpulse-location-update") {
+      loadSatelliteForCoordinates(parseFloat(e.data.lat), parseFloat(e.data.lon), e.data.label);
+    }
+  });
+
+  // Fallback demo image loader
   async function loadDemoImage() {
     try {
       const imgPath = "/images/image.png";

@@ -80,6 +80,94 @@ window.GreenPulseLocation = {
             this.save(fallback.lat, fallback.lon, fallback.label);
             return fallback;
         }
+    },
+
+    // Stitch satellite tiles for specified coordinates
+    stitchSatelliteForCoords(lat, lon, callback, span = 0.0035) {
+        const sw = { lat: lat - span, lng: lon - span };
+        const ne = { lat: lat + span, lng: lon + span };
+        const zoom = 16;
+
+        function lon2tile(lon, z) {
+            return Math.floor((lon + 180) / 360 * Math.pow(2, z));
+        }
+        function lat2tile(lat, z) {
+            return Math.floor((1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z));
+        }
+        function getTileFraction(lat, lon, z) {
+            const x = (lon + 180) / 360 * Math.pow(2, z);
+            const y = (1 - Math.log(Math.tan(lat * Math.PI / 180) + 1 / Math.cos(lat * Math.PI / 180)) / Math.PI) / 2 * Math.pow(2, z);
+            return { x, y };
+        }
+
+        const xMin = lon2tile(sw.lng, zoom);
+        const xMax = lon2tile(ne.lng, zoom);
+        const yMin = lat2tile(ne.lat, zoom);
+        const yMax = lat2tile(sw.lat, zoom);
+
+        const cols = xMax - xMin + 1;
+        const rows = yMax - yMin + 1;
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = cols * 256;
+        tempCanvas.height = rows * 256;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        let loadedCount = 0;
+        const totalTiles = cols * rows;
+
+        for (let c = 0; c < cols; c++) {
+            for (let r = 0; r < rows; r++) {
+                const tileX = xMin + c;
+                const tileY = yMin + r;
+
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                img.src = `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${zoom}/${tileY}/${tileX}`;
+
+                img.onload = () => {
+                    tempCtx.drawImage(img, c * 256, r * 256);
+                    loadedCount++;
+                    if (loadedCount === totalTiles) cropAndReturn();
+                };
+
+                img.onerror = () => {
+                    tempCtx.fillStyle = '#1b4d3e';
+                    tempCtx.fillRect(c * 256, r * 256, 256, 256);
+                    loadedCount++;
+                    if (loadedCount === totalTiles) cropAndReturn();
+                };
+            }
+        }
+
+        function cropAndReturn() {
+            const swFraction = getTileFraction(sw.lat, sw.lng, zoom);
+            const neFraction = getTileFraction(ne.lat, ne.lng, zoom);
+
+            const pixelXStart = (swFraction.x - xMin) * 256;
+            const pixelXEnd = (neFraction.x - xMin) * 256;
+            const pixelYStart = (neFraction.y - yMin) * 256;
+            const pixelYEnd = (swFraction.y - yMin) * 256;
+
+            const cropX = Math.min(pixelXStart, pixelXEnd);
+            const cropY = Math.min(pixelYStart, pixelYEnd);
+            const cropW = Math.abs(pixelXEnd - pixelXStart);
+            const cropH = Math.abs(pixelYEnd - pixelYStart);
+
+            const finalCanvas = document.createElement('canvas');
+            finalCanvas.width = 640;
+            finalCanvas.height = 640;
+            const finalCtx = finalCanvas.getContext('2d');
+
+            if (cropW > 0 && cropH > 0) {
+                finalCtx.drawImage(tempCanvas, cropX, cropY, cropW, cropH, 0, 0, 640, 640);
+            } else {
+                finalCtx.fillStyle = '#1b4d3e';
+                finalCtx.fillRect(0, 0, 640, 640);
+            }
+
+            callback(finalCanvas);
+        }
     }
 };
 
