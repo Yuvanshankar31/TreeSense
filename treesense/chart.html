@@ -12,84 +12,78 @@
     <link rel="stylesheet" href="/src/assets/css/styles.css">
     <link rel="stylesheet" href="/src/assets/css/chatbot.css">
 </head>
-<body>
+<body class="dashboard-app-body">
 
-    <!-- Unified Header -->
-    <header class="site-header">
-        <div class="container header-container">
-            <a href="/index.html" class="logo-link">
-                <img src="/images/treeicon.png" class="logo-image" alt="GreenPulse Imaging logo">
-                <span class="logo-text">GreenPulse</span>
+    <!-- Unified Sleek App Header -->
+    <header class="app-header">
+        <div class="app-header-left">
+            <a href="/index.html" class="app-brand">
+                <img src="/images/treeicon.png" alt="GreenPulse logo">
+                <span class="app-brand-title">Green<span>Pulse</span></span>
             </a>
-            
-            <!-- Desktop Navigation -->
-            <nav>
-                <ul class="nav-menu" id="nav-menu">
-                    <li><a href="/index.html" class="nav-link">Home</a></li>
-                    <li><a href="/predict.html" class="nav-link">Dashboard</a></li>
-                    <li><a href="/chart.html" class="nav-link active">Historical Charts</a></li>
-                </ul>
-            </nav>
+            <div class="app-breadcrumb">
+                <span>📈 Historical Analytics</span>
+                <span style="opacity: 0.4;">/</span>
+                <span>Environmental Telemetry</span>
+            </div>
+        </div>
 
-            <!-- Mobile Burger Icon -->
-            <button class="mobile-menu-icon" id="mobile-menu-toggle" aria-label="Toggle Navigation">
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
-            </button>
+        <div class="app-header-right">
+            <ul class="app-nav-links">
+                <li><a href="/index.html" class="app-nav-link">Home</a></li>
+                <li><a href="/predict.html" class="app-nav-link">Dashboard</a></li>
+                <li><a href="/chart.html" class="app-nav-link active">Historical Charts</a></li>
+            </ul>
+
+            <div class="app-status-pill">
+                <span class="app-status-dot"></span>
+                <span>Telemetry Active</span>
+            </div>
         </div>
     </header>
 
-    <!-- Main Content Layout -->
-    <main class="container dashboard-layout">
-        <div class="dashboard-title-bar">
-            <h2>Historical Environmental Charts</h2>
-            <p>Compare precipitation departure, temperature shifts, AQI trends, and soil moisture levels over time.</p>
+    <!-- Compact Module Segmented Toolbar -->
+    <div class="app-toolbar">
+        <div class="app-segmented-tabs">
+            <button id="rainfall-button" class="tab-pill active">
+                <span>🌧️</span> Rainfall Departure
+            </button>
+            <button id="temperature-button" class="tab-pill">
+                <span>🌡️</span> Temperature Trends
+            </button>
+            <button id="aqi-button" class="tab-pill">
+                <span>💨</span> Air Quality Index
+            </button>
+            <button id="soil-button" class="tab-pill">
+                <span>🌱</span> Soil Moisture Levels
+            </button>
         </div>
 
-        <!-- Dashboard Sub-Tabs -->
-        <div class="dashboard-tabs">
-            <button id="rainfall-button" class="tab-button active">Rainfall Departure</button>
-            <button id="temperature-button" class="tab-button">Temperature Trends</button>
-            <button id="aqi-button" class="tab-button">Air Quality Index</button>
-            <button id="soil-button" class="tab-button">Soil Moisture Levels</button>
+        <div class="app-toolbar-meta">
+            <span>Data: <strong>IMD & CPCB Sensor Feeds</strong></span>
+            <span>•</span>
+            <span style="color: #00e5a3;">Longitudinal Range: 2018 - 2026</span>
         </div>
+    </div>
 
-        <!-- Main Display Iframe Frame -->
-        <div class="iframe-container">
-            <iframe id="model-iframe" src="rainfall.html" title="Historical Environmental Chart"></iframe>
+    <!-- Main Display Iframe Workspace (100% Flex Fill, Zero Outer Scrolling) -->
+    <main class="app-workspace">
+        <div class="app-iframe-wrapper">
+            <iframe id="model-iframe" class="app-iframe" src="rainfall.html" title="Historical Environmental Chart"></iframe>
         </div>
     </main>
 
-    <!-- Unified Footer -->
-    <footer class="site-footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <h3>
-                        <img src="/images/treeicon.png" alt="Logo">
-                        GreenPulse Imaging
-                    </h3>
-                    <p>Advancing ecological monitoring and automated forestry analytics with machine learning and satellite intelligence.</p>
-                </div>
-                <div class="footer-links">
-                    <h4>Navigation</h4>
-                    <ul>
-                        <li><a href="/index.html">Home</a></li>
-                        <li><a href="/predict.html">Dashboard</a></li>
-                        <li><a href="/chart.html">Historical Charts</a></li>
-                    </ul>
-                </div>
-                <div class="footer-contact">
-                    <h4>Contact Us</h4>
-                    <p>📧 <a href="mailto:sksyuvanshankar@gamil.com">sksyuvanshankar@gamil.com</a></p>
-                    <p>📍 Coimbatore, India</p>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2026 GreenPulse Imaging. All rights reserved.</p>
-                <p>Made with 💚 by Yuvan Shankar and Tharuna.</p>
-            </div>
+    <!-- Sleek Minimalist Status Bar -->
+    <footer class="app-statusbar">
+        <div>
+            <span>GreenPulse Telemetry Services v2.4</span>
+            <span style="margin: 0 8px; opacity: 0.3;">|</span>
+            <span>Environmental Longitudinal Analysis</span>
+        </div>
+        <div>
+            <span>&copy; 2026 GreenPulse Imaging</span>
+            <span style="margin: 0 8px; opacity: 0.3;">|</span>
+            <a href="/index.html">Back to Home</a>
         </div>
     </footer>
 
@@ -107,11 +101,13 @@
             const modelIframe = document.getElementById('model-iframe');
 
             buttons.forEach(item => {
-                item.btn.addEventListener('click', () => {
-                    modelIframe.src = item.src;
-                    buttons.forEach(x => x.btn.classList.remove('active'));
-                    item.btn.classList.add('active');
-                });
+                if (item.btn) {
+                    item.btn.addEventListener('click', () => {
+                        modelIframe.src = item.src;
+                        buttons.forEach(x => { if (x.btn) x.btn.classList.remove('active'); });
+                        item.btn.classList.add('active');
+                    });
+                }
             });
         });
     </script>

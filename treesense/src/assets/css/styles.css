@@ -712,6 +712,53 @@ img {
   font-weight: 500;
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-live-location {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, rgba(46, 196, 182, 0.15) 0%, rgba(27, 77, 62, 0.15) 100%);
+  border: 1px solid var(--accent);
+  color: var(--secondary);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  margin-top: 6px;
+}
+
+.btn-live-location:hover {
+  background: var(--accent);
+  color: #0b261b;
+  box-shadow: 0 4px 12px rgba(46, 196, 182, 0.3);
+  transform: translateY(-1px);
+}
+
+.live-loc-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-top: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.live-loc-status.loading {
+  background: rgba(0, 119, 182, 0.1);
+  color: #0077b6;
+}
+
+.live-loc-status.success {
+  background: rgba(56, 176, 0, 0.1);
+  color: #2b8000;
 }
 
 .live-metrics-card {
@@ -851,4 +898,548 @@ img {
     align-items: center;
   }
 }
+
+/* ==========================================================================
+   Full-Screen No-Scroll Modern App Shell & Studio Layout System
+   ========================================================================== */
+
+/* Full-Screen App Shell for Dashboard & Charts */
+body.dashboard-app-body {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background-color: #0b1a13;
+  margin: 0;
+  padding: 0;
+}
+
+.app-header {
+  height: 52px;
+  background: linear-gradient(90deg, #091c13 0%, #0f2c1f 100%);
+  border-bottom: 1px solid rgba(46, 196, 182, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+  z-index: 100;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.app-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+}
+
+.app-brand img {
+  width: 28px;
+  height: 28px;
+  filter: drop-shadow(0 0 6px rgba(46, 196, 182, 0.6));
+}
+
+.app-brand-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+}
+
+.app-brand-title span {
+  color: #00e5a3;
+}
+
+.app-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 4px 12px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.app-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.app-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.app-nav-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  padding: 6px 14px;
+  border-radius: 8px;
+  transition: all var(--transition-fast);
+  text-decoration: none;
+}
+
+.app-nav-link:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.app-nav-link.active {
+  color: #00e5a3;
+  background: rgba(0, 229, 163, 0.12);
+  border: 1px solid rgba(0, 229, 163, 0.3);
+}
+
+.app-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  background: rgba(0, 229, 163, 0.15);
+  border: 1px solid rgba(0, 229, 163, 0.4);
+  color: #00e5a3;
+}
+
+.app-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #00e5a3;
+  box-shadow: 0 0 8px #00e5a3;
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { opacity: 0.8; transform: scale(0.9); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* App Toolbar with Segmented Module Tabs */
+.app-toolbar {
+  height: 48px;
+  background: #0d2217;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  flex-shrink: 0;
+  z-index: 90;
+}
+
+.app-segmented-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 4px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tab-pill {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.65);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.tab-pill:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tab-pill.active {
+  background: linear-gradient(135deg, #184c35, #103323);
+  color: #00e5a3;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 12px rgba(0, 229, 163, 0.2);
+  border: 1px solid rgba(0, 229, 163, 0.35);
+}
+
+.app-toolbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 500;
+}
+
+/* App Main Workspace (100% flex fill, zero outer scroll) */
+.app-workspace {
+  flex: 1;
+  min-height: 0;
+  height: calc(100vh - 126px);
+  position: relative;
+  background: #f4f7f5;
+  overflow: hidden;
+}
+
+.app-iframe-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* App Micro Status Bar */
+.app-statusbar {
+  height: 26px;
+  background: #091710;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
+  flex-shrink: 0;
+  z-index: 80;
+}
+
+.app-statusbar a {
+  color: rgba(0, 229, 163, 0.7);
+}
+
+/* ==========================================================================
+   Modern 2-Column Studio Layout System for Tools (No-Scroll Fit)
+   ========================================================================== */
+
+.studio-container {
+  height: 100vh;
+  max-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 18px;
+  box-sizing: border-box;
+  background: #f4f7f5;
+  gap: 12px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* Compact Studio Header */
+.studio-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #ffffff;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  flex-shrink: 0;
+}
+
+.studio-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.studio-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0f3425, #1b4d3e);
+  color: #00e5a3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 4px 10px rgba(15, 52, 37, 0.15);
+}
+
+.studio-title-group h2 {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--primary);
+  margin: 0;
+}
+
+.studio-title-group p {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.studio-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Buttons */
+.btn-studio-primary {
+  background: linear-gradient(135deg, #134633 0%, #0b261b 100%);
+  color: #00e5a3;
+  border: 1px solid rgba(0, 229, 163, 0.4);
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all var(--transition-fast);
+  box-shadow: 0 4px 12px rgba(15, 52, 37, 0.15);
+}
+
+.btn-studio-primary:hover {
+  background: linear-gradient(135deg, #1b5d44 0%, #134633 100%);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 229, 163, 0.25);
+}
+
+.btn-studio-ghost {
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--transition-fast);
+}
+
+.btn-studio-ghost:hover {
+  background: #ffffff;
+  border-color: var(--secondary);
+  color: var(--secondary);
+  transform: translateY(-1px);
+}
+
+/* Studio Body Grid: Viewers (Left) + Metrics Panel (Right) */
+.studio-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 14px;
+  overflow: hidden;
+}
+
+/* Left Workspace: Side-by-Side Viewers */
+.studio-viewers-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+}
+
+.studio-viewer-card {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.viewer-tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.viewer-canvas-stage {
+  flex: 1;
+  min-height: 0;
+  background: #091a12;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(15, 52, 37, 0.2);
+}
+
+.viewer-canvas-stage img,
+.viewer-canvas-stage canvas {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+/* Right Sidebar: Analytics & Metrics (No Scroll) */
+.studio-metrics-panel {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  box-shadow: var(--shadow-sm);
+  overflow-y: auto;
+}
+
+.panel-section-title {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+  margin-top: 2px;
+}
+
+/* Metric Display Cards */
+.metric-tile {
+  background: linear-gradient(135deg, rgba(203, 243, 240, 0.3) 0%, rgba(255, 255, 255, 0.9) 100%);
+  border: 1px solid rgba(46, 196, 182, 0.3);
+  border-left: 4px solid #00b488;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+}
+
+.metric-tile.danger-accent {
+  background: linear-gradient(135deg, rgba(224, 122, 95, 0.08) 0%, rgba(255, 255, 255, 0.9) 100%);
+  border: 1px solid rgba(224, 122, 95, 0.3);
+  border-left: 4px solid #e07a5f;
+}
+
+.metric-tile-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--secondary);
+}
+
+.metric-tile.danger-accent .metric-tile-label {
+  color: #c95a3b;
+}
+
+.metric-tile-val {
+  font-size: 28px;
+  font-weight: 800;
+  font-family: 'Outfit', sans-serif;
+  color: var(--primary);
+  margin-top: 2px;
+  line-height: 1.1;
+}
+
+.metric-tile.danger-accent .metric-tile-val {
+  color: #a83d20;
+}
+
+/* Progress bar inside metric */
+.metric-progress-bg {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 9999px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.metric-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #1b4d3e, #00e5a3);
+  border-radius: 9999px;
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.metric-progress-fill.danger-fill {
+  background: linear-gradient(90deg, #e07a5f, #f4a261);
+}
+
+/* Insight Box */
+.studio-insight-box {
+  background: rgba(15, 52, 37, 0.04);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--text-main);
+  border-left: 3px solid var(--accent);
+}
+
+.studio-status-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 0, 0, 0.03);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
 

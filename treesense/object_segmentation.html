@@ -3,149 +3,236 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Green Cover Estimator</title>
+  <title>Green Cover Estimator - GreenPulse</title>
   <link rel="stylesheet" href="/src/assets/css/styles.css">
   <style>
-    body {
-      background: #ffffff;
-      padding: 24px;
-    }
-    .module-card {
-      max-width: 1000px;
-      margin: 0 auto;
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 32px;
-      box-shadow: var(--shadow-sm);
-    }
-    .module-header {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    .module-header h2 {
-      font-size: 26px;
-      color: var(--primary);
-    }
-    .module-header p {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-top: 6px;
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #f4f7f5;
     }
   </style>
 </head>
 <body>
 
-<div class="module-card">
-  <div class="module-header">
-    <h2>Green Cover Estimator</h2>
-    <p>Upload a forestry or canopy image to estimate the total green coverage and identify idle land sections.</p>
-  </div>
+<div class="studio-container">
+  <!-- Studio Header -->
+  <header class="studio-header">
+    <div class="studio-title-group">
+      <div class="studio-icon-badge">🌿</div>
+      <div>
+        <h2>Green Cover Estimator</h2>
+        <p>Color space thresholding for vegetation canopy & idle land segmentation</p>
+      </div>
+    </div>
 
-  <!-- Custom Drag/Drop Upload Card styling -->
-  <div class="upload-container">
-    <span style="font-size: 40px; display: block; margin-bottom: 10px;">📷</span>
-    <p style="font-weight: 600; color: var(--secondary); margin-bottom: 8px;">Select Forest Image to Analyze</p>
-    <input type="file" id="image-file" class="file-input" accept="image/*">
-    <button onclick="processImage()" class="btn btn-primary" style="margin-top: 10px;">Process Canopy Image</button>
-  </div>
+    <div class="studio-actions">
+      <input type="file" id="image-file" accept="image/*" style="display: none;" onchange="handleFileSelected(event)">
+      <button class="btn-studio-ghost" onclick="document.getElementById('image-file').click()">
+        <span>📁</span> Browse Imagery
+      </button>
+      <button class="btn-studio-ghost" onclick="loadSampleImage()">
+        <span>🖼️</span> Load Demo Image
+      </button>
+      <button onclick="processImage()" class="btn-studio-primary" id="btn-process">
+        <span>⚡</span> Process Canopy
+      </button>
+    </div>
+  </header>
 
-  <h3 style="font-size: 18px; color: var(--primary); margin: 24px 0 12px 0; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Processed Visualization</h3>
-  
-  <div class="image-comparison">
-    <div class="image-panel">
-      <h3>Original Image</h3>
-      <img id="uploaded-image" src="/images/treeicon.png" alt="Uploaded Image" style="min-height: 250px; object-fit: contain;">
-    </div>
-    <div class="image-panel">
-      <h3>Segmented Green Mask</h3>
-      <img id="processed-image" src="/images/treeicon.png" alt="Processed Image" style="min-height: 250px; object-fit: contain;">
-    </div>
-  </div>
+  <!-- Studio Body: Viewers (Left) + Analytics (Right) -->
+  <div class="studio-body">
+    <!-- Viewers Grid -->
+    <div class="studio-viewers-grid">
+      <div class="studio-viewer-card">
+        <div class="viewer-header">
+          <div class="viewer-tag">
+            <span>📷</span> Original Aerial Imagery
+          </div>
+          <span id="img-meta" style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Aerial RGB</span>
+        </div>
+        <div class="viewer-canvas-stage">
+          <img id="uploaded-image" src="/images/image.png" alt="Original Forest Image">
+        </div>
+      </div>
 
-  <h3 style="font-size: 18px; color: var(--primary); margin: 24px 0 12px 0; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Estimation Metrics</h3>
-  
-  <div class="stats-grid">
-    <div class="metric-card">
-      <div class="metric-label">Green Cover Percentage</div>
-      <div class="metric-value" id="green-cover-percentage">0.00%</div>
+      <div class="studio-viewer-card">
+        <div class="viewer-header">
+          <div class="viewer-tag">
+            <span>🔬</span> Segmented Green Mask
+          </div>
+          <span id="mask-meta" style="font-size: 11px; color: #00b488; font-weight: 700;">Thresholded Canopy</span>
+        </div>
+        <div class="viewer-canvas-stage">
+          <img id="processed-image" src="/images/treeicon.png" alt="Segmented Mask">
+        </div>
+      </div>
     </div>
-    <div class="metric-card" style="border-left-color: #e07a5f; background: rgba(224, 122, 95, 0.08);">
-      <div class="metric-label" style="color: #c95a3b;">Idle Land Percentage</div>
-      <div class="metric-value" style="color: #a83d20;" id="idle-land-percentage">0.00%</div>
-    </div>
+
+    <!-- Right Analytics & Metrics Panel (No scroll needed, fits neatly) -->
+    <aside class="studio-metrics-panel">
+      <div class="panel-section-title">
+        <span>📊</span> Estimation Metrics
+      </div>
+
+      <!-- Green Cover Metric -->
+      <div class="metric-tile">
+        <div class="metric-tile-label">Green Cover Area</div>
+        <div class="metric-tile-val" id="green-cover-percentage">64.85%</div>
+        <div class="metric-progress-bg">
+          <div class="metric-progress-fill" id="green-progress" style="width: 64.85%;"></div>
+        </div>
+      </div>
+
+      <!-- Idle Land Metric -->
+      <div class="metric-tile danger-accent">
+        <div class="metric-tile-label">Idle Land / Bare Soil</div>
+        <div class="metric-tile-val" id="idle-land-percentage">35.15%</div>
+        <div class="metric-progress-bg">
+          <div class="metric-progress-fill danger-fill" id="idle-progress" style="width: 35.15%;"></div>
+        </div>
+      </div>
+
+      <!-- Ecological Status & Classification -->
+      <div class="panel-section-title">
+        <span>🌲</span> Ecological Status
+      </div>
+
+      <div class="studio-status-strip">
+        <span>Canopy Density</span>
+        <strong id="canopy-density-label" style="color: #00b488;">Dense (Tier 1)</strong>
+      </div>
+
+      <div class="studio-status-strip">
+        <span>Fragmentation Risk</span>
+        <strong id="frag-risk-label" style="color: #38b000;">Low Risk</strong>
+      </div>
+
+      <div class="studio-status-strip">
+        <span>Algorithm</span>
+        <span>Mean-Green Adaptive</span>
+      </div>
+
+      <!-- Insight Box -->
+      <div class="studio-insight-box" id="insight-text">
+        High canopy density detected across survey quadrant. Optimal vegetative vigor and minimal bare soil exposure.
+      </div>
+    </aside>
   </div>
 </div>
 
 <script>
-function processImage() {
-  const fileInput = document.getElementById('image-file');
-  const file = fileInput.files[0];
-  if (!file) {
-    alert("Please select a file first.");
-    return;
-  }
+let currentImageSrc = "/images/image.png";
+
+function handleFileSelected(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
   const reader = new FileReader();
-
-  reader.onloadend = () => {
-    const uploadedImage = document.getElementById('uploaded-image');
-    const processedImage = document.getElementById('processed-image');
-    const greenCoverPercentage = document.getElementById('green-cover-percentage');
-    const idleLandPercentage = document.getElementById('idle-land-percentage');
-
-    const img = new Image();
-    img.onload = () => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
-
-      let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      let blackPixelCount = 0;
-
-      // Calculate the mean green value
-      let totalGreen = 0;
-      for (let i = 1; i < imageData.data.length; i += 4) {
-        totalGreen += imageData.data[i];
-      }
-      const meanGreen = totalGreen / (imageData.data.length / 4);
-
-      for (let i = 0; i < imageData.data.length; i += 4) {
-        let gray = (imageData.data[i + 1]) * 0.587; // Keep only green channel
-
-        if (gray < meanGreen / 1.5) {
-          gray = 0;
-          blackPixelCount++;
-        } else {
-          gray = 255;
-        }
-
-        imageData.data[i] = gray;   // Red channel
-        imageData.data[i + 1] = gray; // Green channel
-        imageData.data[i + 2] = gray; // Blue channel
-        imageData.data[i + 3] = 255;  // Alpha channel
-      }
-
-      ctx.putImageData(imageData, 0, 0);
-
-      // Display the processed image and green cover percentage
-      processedImage.src = canvas.toDataURL();
-      const greenPercentVal = ((blackPixelCount / (canvas.width * canvas.height)) * 100).toFixed(2);
-      const idlePercentVal = (100 - greenPercentVal).toFixed(2);
-      
-      greenCoverPercentage.textContent = greenPercentVal + '%';
-      idleLandPercentage.textContent = idlePercentVal + '%';
-    };
-    img.src = reader.result;
-
-    // Display the uploaded image
-    uploadedImage.src = reader.result;
+  reader.onload = (e) => {
+    currentImageSrc = e.target.result;
+    document.getElementById('uploaded-image').src = currentImageSrc;
+    document.getElementById('img-meta').textContent = file.name.substring(0, 16);
+    processImage();
   };
-
   reader.readAsDataURL(file);
 }
+
+function loadSampleImage() {
+  currentImageSrc = "/images/image.png";
+  document.getElementById('uploaded-image').src = currentImageSrc;
+  document.getElementById('img-meta').textContent = "Sample Drone View";
+  processImage();
+}
+
+function processImage() {
+  const uploadedImage = document.getElementById('uploaded-image');
+  const processedImage = document.getElementById('processed-image');
+  const greenCoverPercentage = document.getElementById('green-cover-percentage');
+  const idleLandPercentage = document.getElementById('idle-land-percentage');
+  const greenProgress = document.getElementById('green-progress');
+  const idleProgress = document.getElementById('idle-progress');
+  const densityLabel = document.getElementById('canopy-density-label');
+  const fragRiskLabel = document.getElementById('frag-risk-label');
+  const insightText = document.getElementById('insight-text');
+
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = img.naturalWidth || img.width;
+    canvas.height = img.naturalHeight || img.height;
+    ctx.drawImage(img, 0, 0);
+
+    let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let blackPixelCount = 0;
+
+    let totalGreen = 0;
+    for (let i = 1; i < imageData.data.length; i += 4) {
+      totalGreen += imageData.data[i];
+    }
+    const meanGreen = totalGreen / (imageData.data.length / 4);
+
+    for (let i = 0; i < imageData.data.length; i += 4) {
+      let gray = (imageData.data[i + 1]) * 0.587; // Keep only green channel
+
+      if (gray < meanGreen / 1.5) {
+        gray = 0;
+        blackPixelCount++;
+      } else {
+        gray = 255;
+      }
+
+      imageData.data[i] = gray;
+      imageData.data[i + 1] = gray;
+      imageData.data[i + 2] = gray;
+      imageData.data[i + 3] = 255;
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+
+    processedImage.src = canvas.toDataURL();
+    const greenPercentVal = ((blackPixelCount / (canvas.width * canvas.height)) * 100).toFixed(2);
+    const idlePercentVal = (100 - greenPercentVal).toFixed(2);
+
+    greenCoverPercentage.textContent = greenPercentVal + '%';
+    idleLandPercentage.textContent = idlePercentVal + '%';
+    greenProgress.style.width = greenPercentVal + '%';
+    idleProgress.style.width = idlePercentVal + '%';
+
+    if (parseFloat(greenPercentVal) >= 60) {
+      densityLabel.textContent = "Dense (Tier 1)";
+      densityLabel.style.color = "#00b488";
+      fragRiskLabel.textContent = "Low Risk";
+      fragRiskLabel.style.color = "#38b000";
+      insightText.textContent = "High canopy density detected across survey quadrant. Optimal vegetative vigor and minimal bare soil exposure.";
+    } else if (parseFloat(greenPercentVal) >= 35) {
+      densityLabel.textContent = "Moderate (Tier 2)";
+      densityLabel.style.color = "#2ec4b6";
+      fragRiskLabel.textContent = "Moderate Risk";
+      fragRiskLabel.style.color = "#e7a100";
+      insightText.textContent = "Moderate vegetation coverage. Suitable for target reforestation and enrichment planting.";
+    } else {
+      densityLabel.textContent = "Sparse (Tier 3)";
+      densityLabel.style.color = "#e07a5f";
+      fragRiskLabel.textContent = "High Vulnerability";
+      fragRiskLabel.style.color = "#d90429";
+      insightText.textContent = "Significant bare ground and low crown density. Prioritized zone for restoration.";
+    }
+  };
+  img.src = uploadedImage.src;
+}
+
+// Auto-run on start
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    processImage();
+  }, 200);
+});
 </script>
 
 </body>

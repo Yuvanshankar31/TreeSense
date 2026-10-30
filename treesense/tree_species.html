@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
     
     <link rel="stylesheet" href="/src/assets/css/styles.css">
+    <script src="/src/assets/js/script.js"></script>
     
     <style>
         body {
@@ -270,9 +271,9 @@
             }
         ];
 
-        // Retrieve saved coordinates from index reserve selector or default to Bhopal
-        const mapLat = parseFloat(localStorage.getItem('selectedLatitude')) || 23.2599;
-        const mapLon = parseFloat(localStorage.getItem('selectedLongitude')) || 77.4126;
+        // Retrieve saved coordinates from index reserve selector or default to Coimbatore
+        const mapLat = parseFloat(localStorage.getItem('selectedLatitude')) || 11.0168;
+        const mapLon = parseFloat(localStorage.getItem('selectedLongitude')) || 76.9558;
 
         // Initialize Leaflet Map
         const map = L.map('map', {
@@ -280,6 +281,51 @@
             zoom: 15,
             zoomControl: true
         });
+
+        // Add Live Location Button Control on the map
+        const LiveLocControl = L.Control.extend({
+            options: { position: 'topleft' },
+            onAdd: function() {
+                const btn = L.DomUtil.create('button', 'btn-live-map-loc');
+                btn.innerHTML = '<span>📍</span> My Live Location';
+                btn.style.background = '#0f3425';
+                btn.style.color = '#00e5a3';
+                btn.style.border = '1px solid #00e5a3';
+                btn.style.padding = '8px 14px';
+                btn.style.borderRadius = '8px';
+                btn.style.fontWeight = '700';
+                btn.style.fontSize = '12px';
+                btn.style.cursor = 'pointer';
+                btn.style.boxShadow = '0 4px 12px rgba(0,0,0,0.25)';
+                btn.style.margin = '10px';
+
+                btn.onclick = async function(e) {
+                    e.preventDefault();
+                    btn.innerHTML = '<span>⏳</span> Locating...';
+                    try {
+                        const res = await window.GreenPulseLocation.retrieveLiveLocation();
+                        const lat = parseFloat(res.lat);
+                        const lon = parseFloat(res.lon);
+                        map.flyTo([lat, lon], 16);
+                        L.circleMarker([lat, lon], {
+                            radius: 8,
+                            fillColor: '#00e5a3',
+                            color: '#ffffff',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.95
+                        }).addTo(map).bindPopup(`<b>Your Live Location</b><br>${res.label}`).openPopup();
+                        btn.innerHTML = '<span>✅</span> Located';
+                    } catch(err) {
+                        btn.innerHTML = '<span>⚠️</span> Failed';
+                    } finally {
+                        setTimeout(() => { btn.innerHTML = '<span>📍</span> My Live Location'; }, 3000);
+                    }
+                };
+                return btn;
+            }
+        });
+        map.addControl(new LiveLocControl());
 
         // Map Tile Layers
         const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {

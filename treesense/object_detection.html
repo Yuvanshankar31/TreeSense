@@ -9,133 +9,119 @@
   <!-- Stylesheets -->
   <link rel="stylesheet" href="/src/assets/css/styles.css">
   <style>
-    body {
-      background: #ffffff;
-      padding: 24px;
-      font-family: 'Outfit', sans-serif;
-    }
-    .module-card {
-      max-width: 1000px;
-      margin: 0 auto;
-      background: #ffffff;
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 32px;
-      box-shadow: var(--shadow-sm);
-    }
-    .module-header {
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    .module-header h2 {
-      font-size: 26px;
-      color: var(--primary);
-    }
-    .module-header p {
-      font-size: 14px;
-      color: var(--text-muted);
-      margin-top: 6px;
-    }
-    .loading-status-bar {
-      margin: 15px auto;
-      padding: 12px 18px;
-      border-radius: var(--radius-sm);
-      font-weight: 600;
-      text-align: center;
-      max-width: 600px;
-      transition: all 0.3s ease;
-      box-shadow: var(--shadow-sm);
-    }
-    .status-loading {
-      background-color: var(--accent-light);
-      border: 1px solid var(--accent);
-      color: var(--accent);
-    }
-    .status-ready {
-      background-color: rgba(40, 167, 69, 0.08);
-      border: 1px solid rgb(40, 167, 69);
-      color: rgb(40, 167, 69);
-    }
-    .disabled-container {
-      opacity: 0.5;
-      pointer-events: none;
-    }
-    /* File input overrides */
-    .upload-container input[type="file"] {
-      display: none;
-    }
-    .custom-file-upload {
-      display: inline-block;
-      padding: 10px 20px;
-      background: var(--secondary);
-      color: white;
-      border-radius: var(--radius-sm);
-      cursor: pointer;
-      font-weight: 600;
-      margin-top: 10px;
-      transition: background 0.2s ease;
-    }
-    .custom-file-upload:hover {
-      background: var(--primary);
-    }
-    #file-name {
-      margin-top: 10px;
-      font-weight: 500;
-      color: var(--text-muted);
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: #f4f7f5;
     }
   </style>
 </head>
 <body>
 
-<div class="module-card">
-  <div class="module-header">
-    <h2>Tree Enumeration (Tree Count)</h2>
-    <p>Upload a high-resolution satellite or drone canopy image to automatically locate and enumerate trees using a deep learning YOLOv8 model.</p>
-  </div>
-
-  <!-- Model Loading Status -->
-  <div id="model-status" class="loading-status-bar status-loading">
-    🔄 Preloading local deep learning model... (Please wait before uploading)
-  </div>
-
-  <!-- Custom Drag/Drop Upload Card styling -->
-  <div class="upload-container disabled-container" id="upload-card">
-    <span style="font-size: 40px; display: block; margin-bottom: 10px;">🌲</span>
-    <p style="font-weight: 600; color: var(--secondary); margin-bottom: 4px;">Upload Forest/Canopy Image</p>
-    <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">PNG, JPG, or JPEG images</p>
-    <label for="uploadInput" class="custom-file-upload">
-      Browse Files
-    </label>
-    <input type="file" id="uploadInput" accept="image/*">
-    <div id="file-name">No file selected - Showing default test image</div>
-  </div>
-
-  <h3 style="font-size: 18px; color: var(--primary); margin: 28px 0 12px 0; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Processed Visualization</h3>
-  
-  <div class="image-comparison">
-    <div class="image-panel">
-      <h3>Original Image</h3>
-      <img id="uploaded-image" src="/images/treeicon.png" alt="Uploaded Image" style="min-height: 250px; object-fit: contain; width: 100%;">
-    </div>
-    <div class="image-panel">
-      <h3>Detected Trees Overlay</h3>
-      <div style="position: relative; width: 100%; display: inline-block;">
-        <canvas id="detection-canvas" style="width: 100%; height: auto; display: block; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); border: 1px solid var(--border);"></canvas>
+<div class="studio-container">
+  <!-- Studio Header -->
+  <header class="studio-header">
+    <div class="studio-title-group">
+      <div class="studio-icon-badge">🌲</div>
+      <div>
+        <h2>Tree Enumeration (Tree Count)</h2>
+        <p>Deep learning computer vision (YOLOv8) automated tree detection</p>
       </div>
     </div>
-  </div>
 
-  <h3 style="font-size: 18px; color: var(--primary); margin: 28px 0 12px 0; border-bottom: 1px solid var(--border); padding-bottom: 8px;">Detection Metrics</h3>
-  
-  <div class="stats-grid">
-    <div class="metric-card">
-      <div class="metric-label">Detected Trees</div>
-      <div class="metric-value" id="objectCount">0</div>
+    <div class="studio-actions">
+      <div id="model-status" class="app-status-pill" style="font-size: 12px; padding: 6px 12px;">
+        <span class="app-status-dot"></span>
+        <span id="model-status-text">Loading Model...</span>
+      </div>
+
+      <input type="file" id="uploadInput" accept="image/*" style="display: none;">
+      <button class="btn-studio-ghost" onclick="document.getElementById('uploadInput').click()">
+        <span>📁</span> Browse Imagery
+      </button>
+      <button class="btn-studio-ghost" onclick="autoRunDefaultImage()">
+        <span>🖼️</span> Demo Drone View
+      </button>
     </div>
-    <div class="metric-card" style="border-left-color: var(--secondary); background: rgba(27, 77, 62, 0.05);">
-      <div class="metric-label">Model Inference Time</div>
-      <div class="metric-value" id="inferenceTime">0 ms</div>
+  </header>
+
+  <!-- Studio Body: Viewers (Left) + Analytics (Right) -->
+  <div class="studio-body">
+    <!-- Viewers Grid -->
+    <div class="studio-viewers-grid">
+      <div class="studio-viewer-card">
+        <div class="viewer-header">
+          <div class="viewer-tag">
+            <span>📷</span> Original Satellite Image
+          </div>
+          <span id="file-name" style="font-size: 11px; color: var(--text-muted); font-weight: 600;">image.png</span>
+        </div>
+        <div class="viewer-canvas-stage">
+          <img id="uploaded-image" src="/images/treeicon.png" alt="Uploaded Forest Image">
+        </div>
+      </div>
+
+      <div class="studio-viewer-card">
+        <div class="viewer-header">
+          <div class="viewer-tag">
+            <span>🎯</span> YOLOv8 Tree Detection Overlay
+          </div>
+          <span style="font-size: 11px; color: #00b488; font-weight: 700;">Bounding Boxes & Confidence</span>
+        </div>
+        <div class="viewer-canvas-stage">
+          <canvas id="detection-canvas"></canvas>
+        </div>
+      </div>
     </div>
+
+    <!-- Right Analytics & Metrics Panel (No scroll needed, fits neatly) -->
+    <aside class="studio-metrics-panel">
+      <div class="panel-section-title">
+        <span>📊</span> Enumeration Metrics
+      </div>
+
+      <!-- Detected Trees Count -->
+      <div class="metric-tile">
+        <div class="metric-tile-label">Trees Enumerated</div>
+        <div class="metric-tile-val" id="objectCount">0</div>
+        <div class="metric-progress-bg">
+          <div class="metric-progress-fill" id="count-progress" style="width: 80%;"></div>
+        </div>
+      </div>
+
+      <!-- Model Inference Latency -->
+      <div class="metric-tile" style="border-left-color: #0077b6; background: linear-gradient(135deg, rgba(0, 119, 182, 0.08) 0%, rgba(255, 255, 255, 0.9) 100%);">
+        <div class="metric-tile-label" style="color: #0077b6;">Inference Latency</div>
+        <div class="metric-tile-val" id="inferenceTime" style="color: #00507a;">0 ms</div>
+      </div>
+
+      <!-- Detection Telemetry -->
+      <div class="panel-section-title">
+        <span>⚡</span> Vision Telemetry
+      </div>
+
+      <div class="studio-status-strip">
+        <span>Backend Accelerator</span>
+        <strong id="backend-label" style="color: #00b488;">WebGL GPU</strong>
+      </div>
+
+      <div class="studio-status-strip">
+        <span>Confidence Threshold</span>
+        <strong>20% Confidence</strong>
+      </div>
+
+      <div class="studio-status-strip">
+        <span>Target Class</span>
+        <span class="badge" style="background: rgba(40, 167, 69, 0.15); color: #28a745; padding: 2px 8px; border-radius: 4px; font-weight: 700;">tree</span>
+      </div>
+
+      <!-- Ecological Stand Density Insight -->
+      <div class="studio-insight-box">
+        Automated tree bounding box enumeration minimizes manual forestry surveying time from days to milliseconds.
+      </div>
+    </aside>
   </div>
 </div>
 
@@ -170,9 +156,10 @@
       });
       console.log("Model pre-warmed!");
 
-      statusDiv.className = "loading-status-bar status-ready";
-      statusDiv.innerHTML = "✅ Deep Learning Model Ready (GPU WebGL Accelerated)";
-      uploadCard.classList.remove("disabled-container");
+      const statusText = document.getElementById("model-status-text");
+      if (statusText) statusText.textContent = "YOLOv8 Active (WebGL GPU)";
+      const backendLabel = document.getElementById("backend-label");
+      if (backendLabel) backendLabel.textContent = "WebGL GPU";
       
       // Auto-run on the copied test image
       await autoRunDefaultImage();
@@ -184,17 +171,20 @@
         
         model = await tf.loadGraphModel(MODEL_JSON_URL);
         console.log("Model loaded on CPU!");
-        statusDiv.className = "loading-status-bar status-ready";
-        statusDiv.innerHTML = "⚠️ Deep Learning Model Ready (CPU Fallback)";
-        uploadCard.classList.remove("disabled-container");
+        const statusText = document.getElementById("model-status-text");
+        if (statusText) statusText.textContent = "YOLOv8 Active (CPU Fallback)";
+        const backendLabel = document.getElementById("backend-label");
+        if (backendLabel) backendLabel.textContent = "CPU Fallback";
         
         await autoRunDefaultImage();
       } catch (fallbackError) {
         console.error("Critical error: Failed to load model on both WebGL and CPU.", fallbackError);
-        statusDiv.style.backgroundColor = "rgba(220, 53, 69, 0.1)";
-        statusDiv.style.border = "1px solid rgb(220, 53, 69)";
-        statusDiv.style.color = "rgb(220, 53, 69)";
-        statusDiv.innerHTML = "❌ Failed to load local model files. Please verify the web_model directory.";
+        const statusText = document.getElementById("model-status-text");
+        if (statusText) {
+          statusText.textContent = "Model Error";
+          statusDiv.style.background = "rgba(220, 53, 69, 0.2)";
+          statusDiv.style.color = "#ff4d6d";
+        }
       }
     }
   });

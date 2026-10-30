@@ -72,13 +72,25 @@
           
           <!-- Interactive Location Selector -->
           <div class="location-selector">
-            <label for="reserve-location">Select Forest Reserve Target Zone</label>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <label for="reserve-location">Select Global Forest Reserve Target Zone</label>
+            </div>
             <select id="reserve-location" class="location-select">
               <option value="coimbatore">Coimbatore Forest Reserve, IN</option>
               <option value="bhopal">Bhopal Canopy Area, IN</option>
               <option value="silent_valley">Silent Valley National Park, IN</option>
               <option value="mudumalai">Mudumalai Wildlife Reserve, IN</option>
+              <option value="amazon">Amazon Rainforest (Manaus Zone), BR</option>
+              <option value="black_forest">Black Forest (Schwarzwald), DE</option>
+              <option value="redwood">Redwood National Park, US</option>
+              <option value="congo">Congo Basin Reserve, CD</option>
             </select>
+            
+            <button id="btn-live-location" class="btn-live-location" type="button">
+              <span>📍</span> Retrieve My Live Location
+            </button>
+            <div id="live-loc-status" class="live-loc-status" style="display: none;"></div>
+
             <div class="location-coordinates">
               <span id="coord-lat">Latitude: 11.0168° N</span>
               <span id="coord-lon">Longitude: 76.9558° E</span>
@@ -321,12 +333,70 @@
           treesStatus: "Scattered Stands",
           coverStatus: "Deciduous Canopy",
           fhiStatus: "Stable Health"
+        },
+        amazon: {
+          lat: "3.1190° S",
+          lon: "60.0217° W",
+          latVal: "-3.1190",
+          lonVal: "-60.0217",
+          label: "Amazon Rainforest (Manaus)",
+          trees: 4820,
+          cover: 94.2,
+          fhi: 9.4,
+          co2: 92000,
+          treesStatus: "Ultra-Dense Primary Canopy",
+          coverStatus: "Pristine Rainforest",
+          fhiStatus: "Optimal Vigor"
+        },
+        black_forest: {
+          lat: "48.2723° N",
+          lon: "8.1678° E",
+          latVal: "48.2723",
+          lonVal: "8.1678",
+          label: "Black Forest (Schwarzwald)",
+          trees: 2150,
+          cover: 88.6,
+          fhi: 8.6,
+          co2: 68000,
+          treesStatus: "High Density Conifer",
+          coverStatus: "Dense Boreal Canopy",
+          fhiStatus: "Healthy"
+        },
+        redwood: {
+          lat: "41.2132° N",
+          lon: "124.0046° W",
+          latVal: "41.2132",
+          lonVal: "-124.0046",
+          label: "Redwood National Park",
+          trees: 1890,
+          cover: 91.0,
+          fhi: 9.1,
+          co2: 85000,
+          treesStatus: "Ancient Sequoia Stand",
+          coverStatus: "Giant Crown Cover",
+          fhiStatus: "Pristine Health"
+        },
+        congo: {
+          lat: "0.2280° S",
+          lon: "15.8270° E",
+          latVal: "-0.2280",
+          lonVal: "15.8270",
+          label: "Congo Basin Tropical Reserve",
+          trees: 5120,
+          cover: 95.8,
+          fhi: 9.6,
+          co2: 104000,
+          treesStatus: "Ultra-Dense Tropical",
+          coverStatus: "Continuous Canopy",
+          fhiStatus: "Pristine Vigor"
         }
       };
 
       const select = document.getElementById("reserve-location");
       const coordLat = document.getElementById("coord-lat");
       const coordLon = document.getElementById("coord-lon");
+      const btnLiveLocation = document.getElementById("btn-live-location");
+      const liveLocStatus = document.getElementById("live-loc-status");
       
       const statTrees = document.getElementById("stat-trees");
       const statTreesStatus = document.getElementById("stat-trees-status");
@@ -363,6 +433,7 @@
 
       function updateReserveData(key) {
         const data = locations[key];
+        if (!data) return;
         
         // Save to LocalStorage
         localStorage.setItem("selectedLatitude", data.latVal);
@@ -385,14 +456,104 @@
         statFhiStatus.innerText = data.fhiStatus;
       }
 
+      // Handle Live Location Retrieval
+      if (btnLiveLocation) {
+        btnLiveLocation.addEventListener("click", async () => {
+          liveLocStatus.style.display = "inline-flex";
+          liveLocStatus.className = "live-loc-status loading";
+          liveLocStatus.innerHTML = `<span>⏳</span> Detecting your live location via GPS/IP...`;
+          btnLiveLocation.disabled = true;
+
+          try {
+            const result = await window.GreenPulseLocation.retrieveLiveLocation();
+            
+            const numLat = parseFloat(result.lat);
+            const numLon = parseFloat(result.lon);
+            const absHash = Math.abs(Math.round(numLat * 1000 + numLon * 100));
+            const liveTrees = 800 + (absHash % 1200);
+            const liveCover = (65 + (absHash % 28)).toFixed(1);
+            const liveFhi = (7.0 + (absHash % 25) / 10).toFixed(1);
+            const liveCo2 = Math.round(liveTrees * 38.5);
+
+            const formatted = window.GreenPulseLocation.formatCoords(numLat, numLon).split(",");
+
+            locations["live"] = {
+              lat: formatted[0].trim(),
+              lon: formatted[1].trim(),
+              latVal: result.lat,
+              lonVal: result.lon,
+              label: result.label,
+              trees: liveTrees,
+              cover: parseFloat(liveCover),
+              fhi: parseFloat(liveFhi),
+              co2: liveCo2,
+              treesStatus: "Live Survey Zone",
+              coverStatus: "Active Regional Canopy",
+              fhiStatus: "Live Telemetry Vigor"
+            };
+
+            let liveOption = select.querySelector('option[value="live"]');
+            if (!liveOption) {
+              liveOption = document.createElement("option");
+              liveOption.value = "live";
+              select.prepend(liveOption);
+            }
+            liveOption.textContent = `📍 Live: ${result.label}`;
+            select.value = "live";
+
+            updateReserveData("live");
+
+            liveLocStatus.className = "live-loc-status success";
+            liveLocStatus.innerHTML = `<span>✅</span> Live Location Retrieved: <strong>${result.label}</strong> (${result.source})`;
+          } catch (err) {
+            console.error("Live location error:", err);
+            liveLocStatus.className = "live-loc-status";
+            liveLocStatus.style.background = "rgba(220, 53, 69, 0.1)";
+            liveLocStatus.style.color = "#d90429";
+            liveLocStatus.innerHTML = `<span>⚠️</span> Could not retrieve location. Using default.`;
+          } finally {
+            btnLiveLocation.disabled = false;
+          }
+        });
+      }
+
       // Read from LocalStorage or fallback to default
       const savedLat = localStorage.getItem("selectedLatitude") || "11.0168";
-      let matchedKey = "coimbatore";
+      const savedLoc = localStorage.getItem("selectedLocation");
+
+      let matchedKey = null;
       for (const k in locations) {
         if (locations[k].latVal === savedLat) {
           matchedKey = k;
           break;
         }
+      }
+
+      if (!matchedKey && savedLoc) {
+        // Was a previously detected custom or live location
+        const savedLon = localStorage.getItem("selectedLongitude") || "76.9558";
+        const formatted = window.GreenPulseLocation.formatCoords(savedLat, savedLon).split(",");
+        locations["live"] = {
+          lat: formatted[0].trim(),
+          lon: formatted[1].trim(),
+          latVal: savedLat,
+          lonVal: savedLon,
+          label: savedLoc,
+          trees: 1120,
+          cover: 78.5,
+          fhi: 8.0,
+          co2: 44000,
+          treesStatus: "Live Survey Zone",
+          coverStatus: "Active Regional Canopy",
+          fhiStatus: "Healthy"
+        };
+        const liveOption = document.createElement("option");
+        liveOption.value = "live";
+        liveOption.textContent = `📍 Live: ${savedLoc}`;
+        select.prepend(liveOption);
+        matchedKey = "live";
+      } else if (!matchedKey) {
+        matchedKey = "coimbatore";
       }
 
       select.value = matchedKey;

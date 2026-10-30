@@ -6,6 +6,7 @@
     <title>Weather Dashboard</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="/src/assets/css/styles.css">
+    <script src="/src/assets/js/script.js"></script>
     <style>
         body {
             background: #ffffff;
@@ -51,6 +52,9 @@
 
         <form id="location-form" class="search-form" onsubmit="return false;">
             <input type="text" id="location" class="search-input" placeholder="e.g. Coimbatore, IN">
+            <button type="button" id="btn-live-weather" class="btn btn-secondary" style="background: rgba(0, 229, 163, 0.15); border: 1px solid rgba(0, 229, 163, 0.4); color: var(--secondary); font-weight: 700; cursor: pointer;">
+                <span>📍</span> Use Live Location
+            </button>
             <button type="button" id="get-weather" class="btn btn-primary">Retrieve Weather</button>
         </form>
 
@@ -85,6 +89,29 @@
                 const lat = localStorage.getItem('selectedLatitude') || '11.0168';
                 const lon = localStorage.getItem('selectedLongitude') || '76.9558';
                 fetchWeather(storedLocation, lat, lon);
+            }
+
+            const btnLiveWeather = document.getElementById('btn-live-weather');
+
+            if (btnLiveWeather) {
+                btnLiveWeather.addEventListener('click', async () => {
+                    btnLiveWeather.innerHTML = `<span>⏳</span> Detecting...`;
+                    btnLiveWeather.disabled = true;
+                    try {
+                        const result = await window.GreenPulseLocation.retrieveLiveLocation();
+                        locationInput.value = result.label;
+                        fetchWeather(result.label, result.lat, result.lon);
+                        btnLiveWeather.innerHTML = `<span>✅</span> Live`;
+                    } catch (e) {
+                        console.error(e);
+                        btnLiveWeather.innerHTML = `<span>⚠️</span> Failed`;
+                    } finally {
+                        setTimeout(() => {
+                            btnLiveWeather.disabled = false;
+                            btnLiveWeather.innerHTML = `<span>📍</span> Use Live Location`;
+                        }, 2500);
+                    }
+                });
             }
 
             getWeatherButton.addEventListener('click', async () => {

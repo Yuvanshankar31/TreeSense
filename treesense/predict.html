@@ -12,91 +12,91 @@
     <link rel="stylesheet" href="/src/assets/css/styles.css">
     <link rel="stylesheet" href="/src/assets/css/chatbot.css">
 </head>
-<body>
+<body class="dashboard-app-body">
 
-    <!-- Unified Header -->
-    <header class="site-header">
-        <div class="container header-container">
-            <a href="/index.html" class="logo-link">
-                <img src="/images/treeicon.png" class="logo-image" alt="GreenPulse Imaging logo">
-                <span class="logo-text">GreenPulse</span>
+    <!-- Unified Sleek App Header -->
+    <header class="app-header">
+        <div class="app-header-left">
+            <a href="/index.html" class="app-brand">
+                <img src="/images/treeicon.png" alt="GreenPulse logo">
+                <span class="app-brand-title">Green<span>Pulse</span></span>
             </a>
-            
-            <!-- Desktop Navigation -->
-            <nav>
-                <ul class="nav-menu" id="nav-menu">
-                    <li><a href="/index.html" class="nav-link">Home</a></li>
-                    <li><a href="/predict.html" class="nav-link active">Dashboard</a></li>
-                    <li><a href="/chart.html" class="nav-link">Historical Charts</a></li>
-                </ul>
-            </nav>
+            <div class="app-breadcrumb">
+                <span>🛰️ Live Studio</span>
+                <span style="opacity: 0.4;">/</span>
+                <span id="app-location-label">Coimbatore Forest Reserve</span>
+            </div>
+        </div>
 
-            <!-- Mobile Burger Icon -->
-            <button class="mobile-menu-icon" id="mobile-menu-toggle" aria-label="Toggle Navigation">
-                <div class="bar"></div>
-                <div class="bar"></div>
-                <div class="bar"></div>
-            </button>
+        <div class="app-header-right">
+            <ul class="app-nav-links">
+                <li><a href="/index.html" class="app-nav-link">Home</a></li>
+                <li><a href="/predict.html" class="app-nav-link active">Dashboard</a></li>
+                <li><a href="/chart.html" class="app-nav-link">Historical Charts</a></li>
+            </ul>
+
+            <div class="app-status-pill">
+                <span class="app-status-dot"></span>
+                <span>Engine Active</span>
+            </div>
         </div>
     </header>
 
-    <!-- Dashboard Main Layout -->
-    <main class="container dashboard-layout">
-        <div class="dashboard-title-bar">
-            <h2>Forestry Analytics Dashboard</h2>
-            <p>Select an analysis module below to process imagery and view real-time ecological indices.</p>
+    <!-- Compact Module Segmented Toolbar -->
+    <div class="app-toolbar">
+        <div class="app-segmented-tabs">
+            <button id="detection-button" class="tab-pill active">
+                <span>🌲</span> Tree Count
+            </button>
+            <button id="segmentation-button" class="tab-pill">
+                <span>🌿</span> Green Cover
+            </button>
+            <button id="species-button" class="tab-pill">
+                <span>🍂</span> Tree Species
+            </button>
+            <button id="path-button" class="tab-pill">
+                <span>🛣️</span> Optimal Pathing
+            </button>
+            <button id="health-button" class="tab-pill">
+                <span>🩺</span> Forest Health
+            </button>
+            <button id="historical-button" class="tab-pill">
+                <span>📈</span> Historical Data
+            </button>
         </div>
 
-        <!-- Dashboard Sub-Tabs -->
-        <div class="dashboard-tabs">
-            <button id="detection-button" class="tab-button active">Tree Count</button>
-            <button id="segmentation-button" class="tab-button">Green Cover</button>
-            <button id="species-button" class="tab-button">Tree Species</button>
-            <button id="path-button" class="tab-button">Optimal Pathing</button>
-            <button id="health-button" class="tab-button">Forest Health</button>
-            <button id="historical-button" class="tab-button">Historical Data</button>
+        <div class="app-toolbar-meta">
+            <button id="btn-detect-live-location" class="tab-pill" style="background: rgba(0, 229, 163, 0.15); border: 1px solid rgba(0, 229, 163, 0.4); color: #00e5a3; cursor: pointer; padding: 4px 12px;" title="Retrieve live GPS or IP location">
+                <span>📍</span> Retrieve Live Location
+            </button>
+            <span>•</span>
+            <span id="app-coords-label" style="color: #00e5a3;">Zone: 11.0168° N, 76.9558° E</span>
         </div>
+    </div>
 
-        <!-- Main Display Iframe Frame -->
-        <div class="iframe-container">
-            <iframe id="iframe-detection" src="object_detection.html" title="Tree Count"></iframe>
-            <iframe id="iframe-segmentation" src="" title="Green Cover" style="display: none;"></iframe>
-            <iframe id="iframe-species" src="" title="Tree Species" style="display: none;"></iframe>
-            <iframe id="iframe-path" src="" title="Optimal Pathing" style="display: none;"></iframe>
-            <iframe id="iframe-health" src="" title="Forest Health" style="display: none;"></iframe>
-            <iframe id="iframe-historical" src="" title="Historical Data" style="display: none;"></iframe>
+    <!-- Main Display Iframe Workspace (100% Flex Fill, Zero Outer Scrolling) -->
+    <main class="app-workspace">
+        <div class="app-iframe-wrapper">
+            <iframe id="iframe-detection" class="app-iframe" src="object_detection.html" title="Tree Count"></iframe>
+            <iframe id="iframe-segmentation" class="app-iframe" src="" title="Green Cover" style="display: none;"></iframe>
+            <iframe id="iframe-species" class="app-iframe" src="" title="Tree Species" style="display: none;"></iframe>
+            <iframe id="iframe-path" class="app-iframe" src="" title="Optimal Pathing" style="display: none;"></iframe>
+            <iframe id="iframe-health" class="app-iframe" src="" title="Forest Health" style="display: none;"></iframe>
+            <iframe id="iframe-historical" class="app-iframe" src="" title="Historical Data" style="display: none;"></iframe>
         </div>
     </main>
 
-    <!-- Unified Footer -->
-    <footer class="site-footer">
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-brand">
-                    <h3>
-                        <img src="/images/treeicon.png" alt="Logo">
-                        GreenPulse Imaging
-                    </h3>
-                    <p>Advancing ecological monitoring and automated forestry analytics with machine learning and satellite intelligence.</p>
-                </div>
-                <div class="footer-links">
-                    <h4>Navigation</h4>
-                    <ul>
-                        <li><a href="/index.html">Home</a></li>
-                        <li><a href="/predict.html">Dashboard</a></li>
-                        <li><a href="/chart.html">Historical Charts</a></li>
-                    </ul>
-                </div>
-                <div class="footer-contact">
-                    <h4>Contact Us</h4>
-                    <p>📧 <a href="mailto:sksyuvanshankar@gamil.com">sksyuvanshankar@gamil.com</a></p>
-                    <p>📍 Coimbatore, India</p>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2026 GreenPulse Imaging. All rights reserved.</p>
-                <p>Made with 💚 by Yuvan Shankar and Tharuna.</p>
-            </div>
+    <!-- Sleek Minimalist Status Bar -->
+    <footer class="app-statusbar">
+        <div>
+            <span>GreenPulse Vision Engine v2.4</span>
+            <span style="margin: 0 8px; opacity: 0.3;">|</span>
+            <span>Automated Tree Enumeration & Ecological Telemetry</span>
+        </div>
+        <div>
+            <span>&copy; 2026 GreenPulse Imaging</span>
+            <span style="margin: 0 8px; opacity: 0.3;">|</span>
+            <a href="/index.html">Back to Home</a>
         </div>
     </footer>
 
@@ -139,6 +139,49 @@
                     });
                 }
             });
+
+            // Live Location Display & Detection
+            function refreshLocationDisplay() {
+                if (window.GreenPulseLocation) {
+                    const loc = window.GreenPulseLocation.getStored();
+                    const locLabelEl = document.getElementById("app-location-label");
+                    const coordsLabelEl = document.getElementById("app-coords-label");
+                    if (locLabelEl) locLabelEl.textContent = loc.label;
+                    if (coordsLabelEl) coordsLabelEl.textContent = `Zone: ${window.GreenPulseLocation.formatCoords(loc.lat, loc.lon)}`;
+                }
+            }
+
+            window.addEventListener("greenpulse-location-changed", refreshLocationDisplay);
+            refreshLocationDisplay();
+
+            const btnDetectLive = document.getElementById("btn-detect-live-location");
+            if (btnDetectLive) {
+                btnDetectLive.addEventListener("click", async () => {
+                    btnDetectLive.innerHTML = `<span>⏳</span> Detecting...`;
+                    btnDetectLive.disabled = true;
+                    try {
+                        const res = await window.GreenPulseLocation.retrieveLiveLocation();
+                        refreshLocationDisplay();
+                        btnDetectLive.innerHTML = `<span>✅</span> Live: ${res.label.substring(0, 16)}`;
+
+                        // Reload active iframe to sync with live coordinates
+                        buttons.forEach(x => {
+                            const iframe = document.getElementById(x.iframeId);
+                            if (iframe && iframe.style.display !== 'none' && iframe.src) {
+                                try { iframe.src = x.src; } catch(e){}
+                            }
+                        });
+                    } catch (e) {
+                        console.error(e);
+                        btnDetectLive.innerHTML = `<span>⚠️</span> Failed`;
+                    } finally {
+                        setTimeout(() => {
+                            btnDetectLive.disabled = false;
+                            btnDetectLive.innerHTML = `<span>📍</span> Retrieve Live Location`;
+                        }, 3000);
+                    }
+                });
+            }
         });
     </script>
     <script src="/src/assets/js/chatbot.js" defer></script>
