@@ -168,40 +168,50 @@
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        canvas.width = img.naturalWidth || img.width;
-        canvas.height = img.naturalHeight || img.height;
-        ctx.drawImage(img, 0, 0);
-
-        let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        let blackPixelCount = 0;
-
-        let totalGreen = 0;
-        for (let i = 1; i < imageData.data.length; i += 4) {
-          totalGreen += imageData.data[i];
+        // Constrain to max 640px for near-instant rendering
+        const maxDim = 640;
+        let w = img.naturalWidth || img.width || 640;
+        let h = img.naturalHeight || img.height || 640;
+        if (w > maxDim || h > maxDim) {
+          const scale = Math.min(maxDim / w, maxDim / h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
         }
-        const meanGreen = totalGreen / (imageData.data.length / 4);
 
-        for (let i = 0; i < imageData.data.length; i += 4) {
-          let gray = (imageData.data[i + 1]) * 0.587; // Keep only green channel
+        canvas.width = w;
+        canvas.height = h;
+        ctx.drawImage(img, 0, 0, w, h);
 
-          if (gray < meanGreen / 1.5) {
-            gray = 0;
+        const imageData = ctx.getImageData(0, 0, w, h);
+        const data = imageData.data;
+        const totalPixels = w * h;
+        let blackPixelCount = 0;
+        let totalGreen = 0;
+
+        for (let i = 1; i < data.length; i += 4) {
+          totalGreen += data[i];
+        }
+        const meanGreen = totalGreen / totalPixels;
+        const threshold = meanGreen / 1.5;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = data[i + 1] * 0.587;
+          if (gray < threshold) {
+            data[i] = 0;
+            data[i + 1] = 0;
+            data[i + 2] = 0;
             blackPixelCount++;
           } else {
-            gray = 255;
+            data[i] = 255;
+            data[i + 1] = 255;
+            data[i + 2] = 255;
           }
-
-          imageData.data[i] = gray;
-          imageData.data[i + 1] = gray;
-          imageData.data[i + 2] = gray;
-          imageData.data[i + 3] = 255;
+          data[i + 3] = 255;
         }
 
         ctx.putImageData(imageData, 0, 0);
 
-        // Display the processed image and green cover percentage
         processedImage.src = canvas.toDataURL();
-        const totalPixels = canvas.width * canvas.height;
         const greenPercentVal = ((blackPixelCount / totalPixels) * 100).toFixed(2);
         const idlePercentVal = (100 - parseFloat(greenPercentVal)).toFixed(2);
 
@@ -220,8 +230,6 @@
       };
       img.src = currentImageSrc;
     }
-
-    
 
     document.addEventListener("DOMContentLoaded", () => {
       processImage();

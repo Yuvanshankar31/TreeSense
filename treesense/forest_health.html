@@ -219,11 +219,21 @@
         const canvas = document.getElementById('health-mask-canvas');
         const ctx = canvas.getContext('2d');
 
-        canvas.width = img.naturalWidth || img.width;
-        canvas.height = img.naturalHeight || img.height;
-        ctx.drawImage(img, 0, 0);
+        // Constrain to max 640px for near-instant diagnostics
+        const maxDim = 640;
+        let w = img.naturalWidth || img.width || 640;
+        let h = img.naturalHeight || img.height || 640;
+        if (w > maxDim || h > maxDim) {
+          const scale = Math.min(maxDim / w, maxDim / h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
 
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        canvas.width = w;
+        canvas.height = h;
+        ctx.drawImage(img, 0, 0, w, h);
+
+        const imageData = ctx.getImageData(0, 0, w, h);
         const data = imageData.data;
 
         let healthyCount = 0;
@@ -262,7 +272,7 @@
 
         ctx.putImageData(imageData, 0, 0);
 
-        const totalPixels = canvas.width * canvas.height;
+        const totalPixels = w * h;
         const pctHealthyVal = ((healthyCount / totalPixels) * 100);
         const pctStressedVal = ((stressedCount / totalPixels) * 100);
         const pctSoilVal = ((soilCount / totalPixels) * 100);
@@ -305,8 +315,6 @@
       };
       img.src = currentImageSrc;
     }
-
-    
 
     document.addEventListener("DOMContentLoaded", () => {
       analyzeForestHealth();

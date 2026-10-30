@@ -175,142 +175,149 @@
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
 
-        canvas.width = img.naturalWidth || img.width;
-        canvas.height = img.naturalHeight || img.height;
-        ctx.drawImage(img, 0, 0);
-
-        let imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        let blackPixelCount = 0;
-
-        let totalGreen = 0;
-        for (let i = 1; i < imageData.data.length; i += 4) {
-          totalGreen += imageData.data[i];
+        // Constrain processing dimensions to max 640px for ultra-fast instant execution
+        const maxDim = 640;
+        let w = img.naturalWidth || img.width || 640;
+        let h = img.naturalHeight || img.height || 640;
+        if (w > maxDim || h > maxDim) {
+          const scale = Math.min(maxDim / w, maxDim / h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
         }
-        const meanGreen = totalGreen / (imageData.data.length / 4);
 
-        for (let i = 0; i < imageData.data.length; i += 4) {
-          let gray = (imageData.data[i + 1]) * 0.587;
+        canvas.width = w;
+        canvas.height = h;
+        ctx.drawImage(img, 0, 0, w, h);
 
-          if (gray < meanGreen / 1.5) {
-            gray = 0;
+        const imageData = ctx.getImageData(0, 0, w, h);
+        const data = imageData.data;
+        const totalPixels = w * h;
+        let blackPixelCount = 0;
+        let totalGreen = 0;
+
+        for (let i = 1; i < data.length; i += 4) {
+          totalGreen += data[i];
+        }
+        const meanGreen = totalGreen / totalPixels;
+        const threshold = meanGreen / 1.5;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = data[i + 1] * 0.587;
+          if (gray < threshold) {
+            data[i] = 0;
+            data[i + 1] = 0;
+            data[i + 2] = 0;
             blackPixelCount++;
           } else {
-            gray = 255;
+            data[i] = 255;
+            data[i + 1] = 255;
+            data[i + 2] = 255;
           }
-
-          imageData.data[i] = gray;
-          imageData.data[i + 1] = gray;
-          imageData.data[i + 2] = gray;
-          imageData.data[i + 3] = 255;
+          data[i + 3] = 255;
         }
 
         ctx.putImageData(imageData, 0, 0);
 
-        // 1. Build downsampled cost grid
+        // 1. Build 60x60 downsampled cost grid
         const cols = 60;
         const rows = 60;
-        const costGrid = [];
-        for (let c = 0; c < cols; c++) {
-          costGrid[c] = new Array(rows).fill(1);
-        }
+        const costGrid = new Uint8Array(cols * rows);
+        costGrid.fill(1);
 
-        const blockWidth = Math.ceil(canvas.width / cols);
-        const blockHeight = Math.ceil(canvas.height / rows);
+        const blockW = Math.ceil(w / cols);
+        const blockH = Math.ceil(h / rows);
 
         for (let r = 0; r < rows; r++) {
+          const yStart = r * blockH;
+          const yEnd = Math.min((r + 1) * blockH, h);
           for (let c = 0; c < cols; c++) {
-            let blackPixels = 0;
-            let totalPixels = 0;
-            const xStart = c * blockWidth;
-            const xEnd = Math.min((c + 1) * blockWidth, canvas.width);
-            const yStart = r * blockHeight;
-            const yEnd = Math.min((r + 1) * blockHeight, canvas.height);
+            const xStart = c * blockW;
+            const xEnd = Math.min((c + 1) * blockW, w);
+            let bCount = 0;
+            let pCount = 0;
 
-            for (let y = yStart; y < yEnd; y++) {
-              for (let x = xStart; x < xEnd; x++) {
-                const pixelIdx = (y * canvas.width + x) * 4;
-                if (imageData.data[pixelIdx] === 0) {
-                  blackPixels++;
-                }
-                totalPixels++;
+            for (let y = yStart; y < yEnd; y += 2) {
+              const rowOffset = y * w;
+              for (let x = xStart; x < xEnd; x += 2) {
+                if (data[(rowOffset + x) * 4] === 0) bCount++;
+                pCount++;
               }
             }
-            const blackRatio = totalPixels > 0 ? (blackPixels / totalPixels) : 0;
-            costGrid[c][r] = blackRatio > 0.4 ? 25 : 1;
+            if (pCount > 0 && (bCount / pCount) > 0.4) {
+              costGrid[c + r * cols] = 25; // Obstacle penalty
+            }
           }
         }
 
-        // 2. A* Pathfinding
-        function getHash(x, y) { return `${x},${y}`; }
-
-        function octileHeuristic(x1, y1, x2, y2) {
+        // 2. High-speed typed A* Pathfinding
+        function octile(x1, y1, x2, y2) {
           const dx = Math.abs(x1 - x2);
           const dy = Math.abs(y1 - y2);
           return (dx + dy) + (Math.SQRT2 - 2) * Math.min(dx, dy);
         }
 
-        function findPath(costGrid, startX, startY, endX, endY) {
-          const openSet = [{ x: startX, y: startY }];
-          const closedSet = new Set();
-          const gScore = {};
-          const fScore = {};
-          const cameFrom = {};
+        function findPath(startX, startY, endX, endY) {
+          const startIdx = startX + startY * cols;
+          const endIdx = endX + endY * cols;
 
-          const startHash = getHash(startX, startY);
-          gScore[startHash] = 0;
-          fScore[startHash] = octileHeuristic(startX, startY, endX, endY);
+          const gScore = new Float32Array(cols * rows).fill(Infinity);
+          const fScore = new Float32Array(cols * rows).fill(Infinity);
+          const cameFrom = new Int32Array(cols * rows).fill(-1);
+          const closed = new Uint8Array(cols * rows);
+
+          gScore[startIdx] = 0;
+          fScore[startIdx] = octile(startX, startY, endX, endY);
+
+          const openSet = [startIdx];
+
+          const dxs = [-1, 1, 0, 0, -1, 1, -1, 1];
+          const dys = [0, 0, -1, 1, -1, -1, 1, 1];
+          const dists = [1.0, 1.0, 1.0, 1.0, Math.SQRT2, Math.SQRT2, Math.SQRT2, Math.SQRT2];
 
           while (openSet.length > 0) {
-            let lowestIdx = 0;
-            let lowestF = fScore[getHash(openSet[0].x, openSet[0].y)] ?? Infinity;
+            let lowestPos = 0;
+            let lowestF = fScore[openSet[0]];
             for (let i = 1; i < openSet.length; i++) {
-              const fVal = fScore[getHash(openSet[i].x, openSet[i].y)] ?? Infinity;
-              if (fVal < lowestF) {
-                lowestF = fVal;
-                lowestIdx = i;
+              const f = fScore[openSet[i]];
+              if (f < lowestF) {
+                lowestF = f;
+                lowestPos = i;
               }
             }
 
-            const current = openSet.splice(lowestIdx, 1)[0];
-            const currentHash = getHash(current.x, current.y);
-
-            if (current.x === endX && current.y === endY) {
-              const totalPath = [[current.x, current.y]];
-              let currKey = currentHash;
-              while (cameFrom[currKey]) {
-                const prev = cameFrom[currKey];
-                totalPath.unshift([prev.x, prev.y]);
-                currKey = getHash(prev.x, prev.y);
+            const current = openSet.splice(lowestPos, 1)[0];
+            if (current === endIdx) {
+              const path = [];
+              let curr = current;
+              while (curr !== -1) {
+                const cx = curr % cols;
+                const cy = Math.floor(curr / cols);
+                path.unshift([cx, cy]);
+                curr = cameFrom[curr];
               }
-              return totalPath;
+              return path;
             }
 
-            closedSet.add(currentHash);
+            closed[current] = 1;
+            const cx = current % cols;
+            const cy = Math.floor(current / cols);
 
-            const directions = [
-              [-1, 0, 1.0], [1, 0, 1.0], [0, -1, 1.0], [0, 1, 1.0],
-              [-1, -1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [1, 1, Math.SQRT2]
-            ];
-
-            for (const [dx, dy, moveDist] of directions) {
-              const nx = current.x + dx;
-              const ny = current.y + dy;
-
+            for (let d = 0; d < 8; d++) {
+              const nx = cx + dxs[d];
+              const ny = cy + dys[d];
               if (nx < 0 || nx >= cols || ny < 0 || ny >= rows) continue;
+              const nIdx = nx + ny * cols;
+              if (closed[nIdx]) continue;
 
-              const neighborHash = getHash(nx, ny);
-              if (closedSet.has(neighborHash)) continue;
+              const weight = costGrid[nIdx];
+              const tentG = gScore[current] + dists[d] * weight;
 
-              const stepCost = costGrid[nx][ny] * moveDist;
-              const tentativeG = gScore[currentHash] + stepCost;
-
-              if (tentativeG < (gScore[neighborHash] ?? Infinity)) {
-                cameFrom[neighborHash] = { x: current.x, y: current.y };
-                gScore[neighborHash] = tentativeG;
-                fScore[neighborHash] = tentativeG + octileHeuristic(nx, ny, endX, endY);
-
-                if (!openSet.some(item => item.x === nx && item.y === ny)) {
-                  openSet.push({ x: nx, y: ny });
+              if (tentG < gScore[nIdx]) {
+                cameFrom[nIdx] = current;
+                gScore[nIdx] = tentG;
+                fScore[nIdx] = tentG + octile(nx, ny, endX, endY);
+                if (!openSet.includes(nIdx)) {
+                  openSet.push(nIdx);
                 }
               }
             }
@@ -318,46 +325,48 @@
           return null;
         }
 
-        const path = findPath(costGrid, 0, 0, cols - 1, rows - 1);
+        const path = findPath(0, 0, cols - 1, rows - 1) || findPath(0, 0, cols - 1, Math.floor(rows / 2));
 
-        if (path && path.length > 0) {
-          ctx.beginPath();
+        if (path && path.length > 1) {
           ctx.strokeStyle = '#e07a5f';
-          ctx.lineWidth = Math.max(Math.round(canvas.width / 120), 4);
+          ctx.lineWidth = Math.max(3, Math.round(w / 120));
           ctx.lineCap = 'round';
           ctx.lineJoin = 'round';
+          ctx.beginPath();
+
+          const cellW = w / cols;
+          const cellH = h / rows;
 
           path.forEach((pt, idx) => {
-            const px = (pt[0] + 0.5) * (canvas.width / cols);
-            const py = (pt[1] + 0.5) * (canvas.height / rows);
-            if (idx === 0) {
-              ctx.moveTo(px, py);
-            } else {
-              ctx.lineTo(px, py);
-            }
+            const px = (pt[0] + 0.5) * cellW;
+            const py = (pt[1] + 0.5) * cellH;
+            if (idx === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
           });
           ctx.stroke();
 
           // Start point (Green)
           ctx.beginPath();
           ctx.fillStyle = '#00e5a3';
-          ctx.arc((path[0][0] + 0.5) * (canvas.width / cols), (path[0][1] + 0.5) * (canvas.height / rows), ctx.lineWidth * 1.5, 0, Math.PI * 2);
+          ctx.arc((path[0][0] + 0.5) * cellW, (path[0][1] + 0.5) * cellH, ctx.lineWidth * 1.5, 0, Math.PI * 2);
           ctx.fill();
 
           // Goal point (Red)
           ctx.beginPath();
           ctx.fillStyle = '#e07a5f';
-          ctx.arc((path[path.length - 1][0] + 0.5) * (canvas.width / cols), (path[path.length - 1][1] + 0.5) * (canvas.height / rows), ctx.lineWidth * 1.5, 0, Math.PI * 2);
+          const last = path[path.length - 1];
+          ctx.arc((last[0] + 0.5) * cellW, (last[1] + 0.5) * cellH, ctx.lineWidth * 1.5, 0, Math.PI * 2);
           ctx.fill();
         }
 
-        // Display the processed image and green cover percentage
         processedImage.src = canvas.toDataURL();
-        const greenPercentVal = ((blackPixelCount / (canvas.width * canvas.height)) * 100).toFixed(2);
+        const greenPercentVal = ((blackPixelCount / totalPixels) * 100).toFixed(2);
         const idlePercentVal = (100 - greenPercentVal).toFixed(2);
 
-        greenCoverPercentage.textContent = greenPercentVal + '%';
-        idleLandPercentage.textContent = idlePercentVal + '%';
+        if (greenCoverPercentage) greenCoverPercentage.textContent = greenPercentVal + '%';
+        if (idleLandPercentage) idleLandPercentage.textContent = idlePercentVal + '%';
+        if (greenProgress) greenProgress.style.width = greenPercentVal + '%';
+        if (idleProgress) idleProgress.style.width = idlePercentVal + '%';
       };
       img.src = currentImageSrc;
     }

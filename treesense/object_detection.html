@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tree Enumeration (Tree Count)</title>
-  <!-- TensorFlow.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js" integrity="sha384-xc4sZTUOM2obsQR75Be0zGbt7Gb6mOVFJN4yBm30Xn0YQLDWIY+yrtFmLmIank6w" crossorigin="anonymous"></script>
+  <!-- TensorFlow.js Core & Backends -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.20.0/dist/tf-backend-wasm.min.js"></script>
   <!-- Stylesheets -->
   <link rel="stylesheet" href="/src/assets/css/styles.css">
   <style>
@@ -104,7 +105,7 @@
 
       <div class="studio-status-strip">
         <span>Backend Accelerator</span>
-        <strong id="backend-label" style="color: #00b488;">WebGL GPU (Optimized)</strong>
+        <strong id="backend-label" style="color: #00b488;">Initializing...</strong>
       </div>
 
       <div class="studio-status-strip">
@@ -132,7 +133,6 @@
   
   let model = null;
   let isProcessing = false;
-  let currentLoadedImage = null;
   let sharedCanvas = null;
 
   const input = document.getElementById("uploadInput");
@@ -145,56 +145,66 @@
   // Preload and accelerate model on load
   document.addEventListener("DOMContentLoaded", async () => {
     try {
-      console.log("Configuring GPU acceleration flags...");
-      try {
-        tf.env().set('WEBGL_FORCE_F16_TEXTURES', true);
-        tf.env().set('WEBGL_PACK', true);
-        tf.env().set('WEBGL_VERSION', 2);
-        tf.env().set('WEBGL_DELETE_TEXTURE_THRESHOLD', 0);
-      } catch (e) {
-        console.warn("Could not set advanced WebGL flags:", e);
+      // 1. Enable production mode (disables slow NaN checks and assertions)
+      if (typeof tf.enableProdMode === 'function') {
+        tf.enableProdMode();
       }
 
-      await tf.setBackend('webgl');
-      await tf.ready();
-      
+      // 2. Select fastest backend available (WebGL -> WASM SIMD -> CPU)
+      let activeBackend = 'webgl';
+      try {
+        await tf.setBackend('webgl');
+        await tf.ready();
+      } catch (webglErr) {
+        console.warn("WebGL unavailable, falling back to WASM backend...", webglErr);
+        try {
+          await tf.setBackend('wasm');
+          await tf.ready();
+          activeBackend = 'wasm';
+        } catch (wasmErr) {
+          console.warn("WASM unavailable, falling back to CPU...", wasmErr);
+          await tf.setBackend('cpu');
+          await tf.ready();
+          activeBackend = 'cpu';
+        }
+      }
+
+      const backendName = tf.getBackend();
+      if (backendLabel) {
+        backendLabel.textContent = backendName === 'webgl' 
+          ? 'WebGL GPU (Hardware Accelerated)' 
+          : (backendName === 'wasm' ? 'WASM SIMD (Multi-threaded)' : 'CPU');
+        backendLabel.style.color = backendName === 'webgl' ? '#00b488' : '#e9c46a';
+      }
+
+      // 3. Load GraphModel
       console.log("Loading TensorFlow.js model...");
       model = await tf.loadGraphModel(MODEL_JSON_URL);
       console.log("Model loaded successfully!");
       
-      // Pre-warm the model and force GPU shader compilation immediately
-      console.log("Pre-warming model and compiling GPU shaders...");
-      tf.tidy(() => {
+      // 4. Safe Warm-Up
+      try {
         const dummy = tf.zeros([1, 640, 640, 3]);
-        const out = model.predict(dummy);
-        out.dataSync(); // Forces shader compilation now, preventing lag on first real inference
-      });
-      console.log("GPU shaders pre-warmed!");
+        const out = model.execute(dummy);
+        if (out && out.data) await out.data();
+        tf.dispose([dummy, out]);
+      } catch (wErr) {
+        console.warn("Warmup note:", wErr);
+      }
 
-      if (statusText) statusText.textContent = "YOLOv8 Active (WebGL GPU)";
-      if (backendLabel) backendLabel.textContent = "WebGL GPU (High Speed)";
+      if (statusText) statusText.textContent = `YOLOv8 Active (${backendName.toUpperCase()})`;
+      if (statusDiv) {
+        statusDiv.style.background = "rgba(0, 229, 163, 0.15)";
+        statusDiv.style.color = "#00e5a3";
+      }
 
-      // Automatically load live satellite imagery for selected location, or demo view
       await loadDemoImage();
     } catch (error) {
-      console.warn("Failed to load model on WebGL, trying CPU fallback...", error);
-      try {
-        await tf.setBackend('cpu');
-        await tf.ready();
-        
-        model = await tf.loadGraphModel(MODEL_JSON_URL);
-        console.log("Model loaded on CPU!");
-        if (statusText) statusText.textContent = "YOLOv8 Active (CPU)";
-        if (backendLabel) backendLabel.textContent = "CPU Fallback";
-        
-        await loadDemoImage();
-      } catch (fallbackError) {
-        console.error("Critical error: Failed to load model on both WebGL and CPU.", fallbackError);
-        if (statusText) {
-          statusText.textContent = "Model Error";
-          statusDiv.style.background = "rgba(220, 53, 69, 0.2)";
-          statusDiv.style.color = "#ff4d6d";
-        }
+      console.error("Critical error loading model:", error);
+      if (statusText) {
+        statusText.textContent = "Model Error";
+        statusDiv.style.background = "rgba(220, 53, 69, 0.2)";
+        statusDiv.style.color = "#ff4d6d";
       }
     }
   });
@@ -227,11 +237,6 @@
       input.value = "";
       return;
     }
-    if (file.size > 15 * 1024 * 1024) {
-      alert("Please select an image smaller than 15 MB.");
-      input.value = "";
-      return;
-    }
     
     const url = URL.createObjectURL(file);
     uploadedImg.src = url;
@@ -245,7 +250,7 @@
     img.src = url;
   });
 
-  // Preprocess image directly from loaded HTMLImageElement to [1, 640, 640, 3] layout
+  // Preprocess image directly from loaded HTMLImageElement
   function prepare_input_fast(img) {
     if (!sharedCanvas) {
       sharedCanvas = document.createElement("canvas");
@@ -259,7 +264,7 @@
       return tf.browser.fromPixels(sharedCanvas)
         .toFloat()
         .div(255.0)
-        .expandDims(0); // Shape: [1, 640, 640, 3]
+        .expandDims(0); // [1, 640, 640, 3]
     });
 
     const imgWidth = img.naturalWidth || img.width || 640;
@@ -267,36 +272,36 @@
     return [tensor, imgWidth, imgHeight];
   }
 
-  // Execute predictions and free GPU tensor memories
+  // Execute predictions directly with execute() and free memory
   async function run_model_fast(inputTensor) {
     if (!model) throw new Error("TensorFlow.js model not ready");
 
     let outputTensor = null;
     try {
-      outputTensor = model.predict(inputTensor);
+      outputTensor = model.execute(inputTensor);
       return await outputTensor.data();
     } finally {
       tf.dispose([inputTensor, outputTensor]);
     }
   }
 
-  // Optimized O(N) YOLOv8 output parser with typed suppression array
+  // Inlined ultra-fast O(N) YOLOv8 output parser
   function process_output_fast(output, img_width, img_height) {
     const rawBoxes = [];
     const num_classes = Math.round(output.length / 8400) - 4;
+    const scaleX = img_width / 640;
+    const scaleY = img_height / 640;
 
     for (let index = 0; index < 8400; index++) {
-      let class_id = 0;
       let prob = 0;
       
       if (num_classes === 1) {
-        prob = output[8400 * 4 + index];
+        prob = output[33600 + index]; // 8400 * 4 = 33600
       } else {
         for (let col = 0; col < num_classes; col++) {
           const p = output[8400 * (col + 4) + index];
           if (p > prob) {
             prob = p;
-            class_id = col;
           }
         }
       }
@@ -305,26 +310,28 @@
         continue;
       }
 
-      const label = yolo_classes[class_id] || `tree`;
       const xc = output[index];
       const yc = output[8400 + index];
-      const w = output[2 * 8400 + index];
-      const h = output[3 * 8400 + index];
+      const w = output[16800 + index];
+      const h = output[25200 + index];
 
-      // Convert center coordinates to bounding box coordinates
-      const x1 = (xc - w / 2) / 640 * img_width;
-      const y1 = (yc - h / 2) / 640 * img_height;
-      const x2 = (xc + w / 2) / 640 * img_width;
-      const y2 = (yc + h / 2) / 640 * img_height;
+      const halfW = w * 0.5;
+      const halfH = h * 0.5;
+      const x1 = (xc - halfW) * scaleX;
+      const y1 = (yc - halfH) * scaleY;
+      const x2 = (xc + halfW) * scaleX;
+      const y2 = (yc + halfH) * scaleY;
 
-      rawBoxes.push([x1, y1, x2, y2, label, prob]);
+      rawBoxes.push([x1, y1, x2, y2, "tree", prob]);
     }
 
-    // Sort by confidence descending
+    if (rawBoxes.length === 0) return [];
+
+    // Sort descending by confidence
     rawBoxes.sort((a, b) => b[5] - a[5]);
 
-    // Apply fast Non-Maximum Suppression (NMS) using boolean mask
-    const maxCandidates = Math.min(rawBoxes.length, 600);
+    // Fast Non-Maximum Suppression (NMS) with inlined IoU
+    const maxCandidates = Math.min(rawBoxes.length, 350);
     const suppressed = new Uint8Array(maxCandidates);
     const result = [];
 
@@ -332,36 +339,37 @@
       if (suppressed[i]) continue;
       const b1 = rawBoxes[i];
       result.push(b1);
-      if (result.length >= 350) break; // Limit to top 350 dense crowns
+      if (result.length >= 200) break;
+
+      const b1_x1 = b1[0], b1_y1 = b1[1], b1_x2 = b1[2], b1_y2 = b1[3];
+      const area1 = (b1_x2 - b1_x1) * (b1_y2 - b1_y1);
 
       for (let j = i + 1; j < maxCandidates; j++) {
-        if (!suppressed[j] && iou(b1, rawBoxes[j]) >= 0.45) {
-          suppressed[j] = 1;
+        if (suppressed[j]) continue;
+        const b2 = rawBoxes[j];
+        
+        const ix1 = Math.max(b1_x1, b2[0]);
+        const iy1 = Math.max(b1_y1, b2[1]);
+        const ix2 = Math.min(b1_x2, b2[2]);
+        const iy2 = Math.min(b1_y2, b2[3]);
+        
+        if (ix2 > ix1 && iy2 > iy1) {
+          const inter = (ix2 - ix1) * (iy2 - iy1);
+          const area2 = (b2[2] - b2[0]) * (b2[3] - b2[1]);
+          const union = area1 + area2 - inter;
+          if (inter / union >= 0.45) {
+            suppressed[j] = 1;
+          }
         }
       }
     }
     return result;
   }
 
-  // Fast Intersection over Union (IoU)
-  function iou(box1, box2) {
-    const x1 = Math.max(box1[0], box2[0]);
-    const y1 = Math.max(box1[1], box2[1]);
-    const x2 = Math.min(box1[2], box2[2]);
-    const y2 = Math.min(box1[3], box2[3]);
-    if (x2 <= x1 || y2 <= y1) return 0;
-
-    const inter = (x2 - x1) * (y2 - y1);
-    const area1 = (box1[2] - box1[0]) * (box1[3] - box1[1]);
-    const area2 = (box2[2] - box2[0]) * (box2[3] - box2[1]);
-    return inter / (area1 + area2 - inter);
-  }
-
   // Preprocess, predict, and render in a single streamlined pipeline
   async function processAndDrawImage(img) {
     if (isProcessing) return;
     isProcessing = true;
-    currentLoadedImage = img;
 
     const startTime = performance.now();
     try {
