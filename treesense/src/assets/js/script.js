@@ -83,10 +83,9 @@ window.GreenPulseLocation = {
     },
 
     // Stitch satellite tiles for specified coordinates
-    stitchSatelliteForCoords(lat, lon, callback, span = 0.0035) {
+    stitchSatelliteForCoords(lat, lon, callback, span = 0.0016, zoom = 17) {
         const sw = { lat: lat - span, lng: lon - span };
         const ne = { lat: lat + span, lng: lon + span };
-        const zoom = 16;
 
         function lon2tile(lon, z) {
             return Math.floor((lon + 180) / 360 * Math.pow(2, z));
@@ -115,6 +114,23 @@ window.GreenPulseLocation = {
 
         let loadedCount = 0;
         const totalTiles = cols * rows;
+        let isDone = false;
+
+        const safetyTimer = setTimeout(() => {
+            if (!isDone) {
+                isDone = true;
+                cropAndReturn();
+            }
+        }, 4500);
+
+        function handleTileComplete() {
+            loadedCount++;
+            if (!isDone && loadedCount >= totalTiles) {
+                isDone = true;
+                clearTimeout(safetyTimer);
+                cropAndReturn();
+            }
+        }
 
         for (let c = 0; c < cols; c++) {
             for (let r = 0; r < rows; r++) {
@@ -127,15 +143,13 @@ window.GreenPulseLocation = {
 
                 img.onload = () => {
                     tempCtx.drawImage(img, c * 256, r * 256);
-                    loadedCount++;
-                    if (loadedCount === totalTiles) cropAndReturn();
+                    handleTileComplete();
                 };
 
                 img.onerror = () => {
                     tempCtx.fillStyle = '#1b4d3e';
                     tempCtx.fillRect(c * 256, r * 256, 256, 256);
-                    loadedCount++;
-                    if (loadedCount === totalTiles) cropAndReturn();
+                    handleTileComplete();
                 };
             }
         }
