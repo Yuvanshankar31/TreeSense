@@ -6,9 +6,6 @@
   <title>Tree Enumeration (Tree Count)</title>
   <!-- TensorFlow.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js" integrity="sha384-xc4sZTUOM2obsQR75Be0zGbt7Gb6mOVFJN4yBm30Xn0YQLDWIY+yrtFmLmIank6w" crossorigin="anonymous"></script>
-  <!-- Helpers -->
-  <script src="/src/assets/js/coordinates.js"></script>
-  <script src="/src/assets/js/satellite.js"></script>
   <!-- Stylesheets -->
   <link rel="stylesheet" href="/src/assets/css/styles.css">
   <style>
@@ -39,10 +36,6 @@
         <span class="app-status-dot"></span>
         <span id="model-status-text">Loading Model...</span>
       </div>
-
-      <button class="btn-studio-ghost" id="btn-live-satellite" onclick="loadLiveSatelliteImagery()" title="Fetch satellite imagery for selected live location">
-        <span>🛰️</span> Live Satellite View
-      </button>
 
       <input type="file" id="uploadInput" accept="image/*" style="display: none;">
       <button class="btn-studio-ghost" onclick="document.getElementById('uploadInput').click()">
@@ -182,7 +175,7 @@
       if (backendLabel) backendLabel.textContent = "WebGL GPU (High Speed)";
 
       // Automatically load live satellite imagery for selected location, or demo view
-      await autoLoadInitialView();
+      await loadDemoImage();
     } catch (error) {
       console.warn("Failed to load model on WebGL, trying CPU fallback...", error);
       try {
@@ -194,7 +187,7 @@
         if (statusText) statusText.textContent = "YOLOv8 Active (CPU)";
         if (backendLabel) backendLabel.textContent = "CPU Fallback";
         
-        await autoLoadInitialView();
+        await loadDemoImage();
       } catch (fallbackError) {
         console.error("Critical error: Failed to load model on both WebGL and CPU.", fallbackError);
         if (statusText) {
@@ -205,47 +198,6 @@
       }
     }
   });
-
-  // Decide whether to load live satellite imagery or sample
-  async function autoLoadInitialView() {
-    const lat = localStorage.getItem('selectedLatitude');
-    const lon = localStorage.getItem('selectedLongitude');
-    if (lat && lon) {
-      await loadLiveSatelliteImagery();
-    } else {
-      await loadDemoImage();
-    }
-  }
-
-  // Fetch and display live satellite imagery for the selected or GPS coordinates
-  async function loadLiveSatelliteImagery() {
-    if (!model) return;
-    const { lat, lon } = (typeof getSelectedCoordinates === "function") 
-      ? getSelectedCoordinates(11.0168, 76.9558) 
-      : { lat: 11.0168, lon: 76.9558 };
-    
-    const locName = localStorage.getItem('selectedLocation') || 'Live Survey Zone';
-    if (fileNameLabel) {
-      fileNameLabel.textContent = `🛰️ Fetching Live Satellite: ${locName.substring(0, 16)} (${lat.toFixed(2)}°, ${lon.toFixed(2)}°)...`;
-    }
-
-    try {
-      if (window.GreenPulseSatellite) {
-        const result = await window.GreenPulseSatellite.fetchLiveSatelliteImage(lat, lon, 16);
-        uploadedImg.src = result.dataUrl;
-        if (fileNameLabel) {
-          fileNameLabel.textContent = `📍 Live Satellite: ${locName.substring(0, 16)} (${lat.toFixed(4)}°, ${lon.toFixed(4)}°)`;
-        }
-        await processAndDrawImage(result.img);
-        return;
-      }
-    } catch (err) {
-      console.warn("Could not fetch live satellite image, using demo aerial view:", err);
-    }
-
-    // Fallback to sample image
-    await loadDemoImage();
-  }
 
   // Load local high-res demo image
   async function loadDemoImage() {
@@ -291,23 +243,6 @@
       URL.revokeObjectURL(url);
     };
     img.src = url;
-  });
-
-  // Listen for location changes from parent predict.html or index.html
-  window.addEventListener("storage", (e) => {
-    if (e.key === "selectedLatitude" || e.key === "selectedLongitude" || e.key === "selectedLocation") {
-      loadLiveSatelliteImagery();
-    }
-  });
-
-  window.addEventListener("message", (e) => {
-    if (e.data && e.data.type === "greenpulse-location-update") {
-      loadLiveSatelliteImagery();
-    }
-  });
-
-  window.addEventListener("greenpulse-location-changed", () => {
-    loadLiveSatelliteImagery();
   });
 
   // Preprocess image directly from loaded HTMLImageElement to [1, 640, 640, 3] layout

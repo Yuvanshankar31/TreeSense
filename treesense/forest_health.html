@@ -5,8 +5,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Forest Health & Canopy Analyzer - GreenPulse</title>
-  <script src="/src/assets/js/coordinates.js"></script>
-  <script src="/src/assets/js/satellite.js"></script>
   <link rel="stylesheet" href="/src/assets/css/styles.css">
   <style>
     html,
@@ -76,9 +74,6 @@
       <div class="studio-actions">
         <input type="file" id="health-image-file" class="file-input" accept="image/*" style="display: none;"
           onchange="handleFileSelected(event)">
-        <button class="btn-studio-ghost" id="btn-live-satellite" onclick="loadLiveSatelliteImagery()">
-        <span>🛰️</span> Live Satellite View
-      </button>
       <button class="btn-studio-ghost" onclick="document.getElementById('health-image-file').click()">
           <span>📁</span> Browse Imagery
         </button>
@@ -187,27 +182,7 @@
       reader.readAsDataURL(file);
     }
 
-    async function loadLiveSatelliteImagery() {
-      const { lat, lon } = (typeof getSelectedCoordinates === "function") 
-        ? getSelectedCoordinates(11.0168, 76.9558) 
-        : { lat: 11.0168, lon: 76.9558 };
-      const locName = localStorage.getItem('selectedLocation') || 'Live Survey Quadrant';
-      const metaEl = document.getElementById('health-img-meta');
-      if (metaEl) metaEl.textContent = `🛰️ ${locName.substring(0, 16)}`;
-
-      try {
-        if (window.GreenPulseSatellite) {
-          const res = await window.GreenPulseSatellite.fetchLiveSatelliteImage(lat, lon, 16);
-          currentImageSrc = res.dataUrl;
-          document.getElementById('orig-img').src = currentImageSrc;
-          analyzeForestHealth();
-          return;
-        }
-      } catch (e) {
-        console.warn("Satellite fetch error:", e);
-      }
-      loadSampleImage();
-    }
+    
 
     function loadSampleImage() {
       currentImageSrc = "/images/image.png";
@@ -331,23 +306,10 @@
       img.src = currentImageSrc;
     }
 
-    window.addEventListener("storage", (e) => {
-      if (e.key === "selectedLatitude" || e.key === "selectedLongitude") {
-        loadLiveSatelliteImagery();
-      }
-    });
-    window.addEventListener("message", (e) => {
-      if (e.data && e.data.type === "greenpulse-location-update") {
-        loadLiveSatelliteImagery();
-      }
-    });
+    
 
     document.addEventListener("DOMContentLoaded", () => {
-      if (localStorage.getItem('selectedLatitude')) {
-        loadLiveSatelliteImagery();
-      } else {
-        analyzeForestHealth();
-      }
+      analyzeForestHealth();
     });
   </script>
 
